@@ -30,6 +30,9 @@ class func:
   def __len__(self) -> int:
     return sum(x for x in self.__f) 
 
+  def __hash__(self):
+    return hash(str(self.__f))
+
   @property
   def vars_ordered(self) -> List[str]:
     return self.__vars
