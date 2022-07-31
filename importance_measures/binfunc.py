@@ -3,14 +3,14 @@ from __future__ import annotations
 from sympy import Symbol
 from typing import Callable, List, Iterator, Set, Tuple
 from math import log2
-from binvec import vec, itervecs, list2binvec, incidence, sum_notation
-from bintools import iterbin
-from tabulate import tabulate
 import inspect
 import random
 from itertools import product
-
+from tabulate import tabulate
 from bidict import bidict
+
+from .binvec import vec, itervecs, list2binvec, incidence, sum_notation
+from .bintools import iterbin
 
 class func:
   __f : List[bool]

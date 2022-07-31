@@ -1,7 +1,7 @@
 from scipy.special import binom
 from typing import Iterable, Set, Callable, List, Union
-from binfunc import func, init_empty
-from binvec import itervecs, vec
+from .binfunc import func, init_empty
+from .binvec import itervecs, vec
 
 def forall(S: Set[str], f : func) -> func:
   assert isinstance(S, set)

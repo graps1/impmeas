@@ -1,6 +1,7 @@
-from binfunc import func
-from binvec import vec, incidence, itervecs
 from typing import Callable, Dict, Set, Tuple, List, Any
+
+from .binfunc import func
+from .binvec import vec, incidence, itervecs
 
 def k(u : vec, f : func, target_value=1) -> Set[str]:
   # returns the minimal number of flips needed in u 

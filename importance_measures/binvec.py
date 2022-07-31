@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from typing import Iterator, List, Set, Tuple, Dict, Union
-from bintools import iterbin
 from bidict import bidict
+
+from .bintools import iterbin
     
 class vec:
   u: Dict[str, bool]

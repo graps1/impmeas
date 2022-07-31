@@ -1,7 +1,6 @@
-from dataclasses import dataclass
 from typing import Callable, List, Set, Union, Tuple, Dict
 from dataclasses import dataclass
-from binfunc import func
+from .binfunc import func
 
 @dataclass
 class Ranking:

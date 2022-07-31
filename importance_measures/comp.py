@@ -1,10 +1,10 @@
 
-import cgm 
-import blame
+import .cgm 
+import .blame
 import numpy as np
 from tqdm import tqdm
-from ranking import from_val
-from binfunc import func, iterfunc
+from .ranking import from_val
+from .binfunc import func, iterfunc
 from tabulate import tabulate
 
 RANKINGS = [
