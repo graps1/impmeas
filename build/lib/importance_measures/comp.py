@@ -1,6 +1,5 @@
-
-import .cgm 
-import .blame
+from . import cgm 
+from . import blame
 import numpy as np
 from tqdm import tqdm
 from .ranking import from_val
