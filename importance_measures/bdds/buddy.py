@@ -1,70 +1,80 @@
 import ast 
 import os
 from ctypes import CDLL, c_double, c_int, c_char_p, byref
+from functools import cached_property
+from typing import Tuple
 
-class BuddyFunc:
-	def __init__(self, model : "Buddy", node : int):
-		self.node = node
+class BuddyNode:
+	def __init__(self, model : "Buddy", node_id : int):
+		self.node_id = node_id
 		self.model = model 
 
-	def __hash__(self): return self.node
+	def __hash__(self): return self.node_id.__hash__()
 
-	def __call_op(self, op, *others):
-		others = list(others)
-		for idx in range(len(others)):
-			# if they're already integers (ie node ids) then don't do anything
-			if isinstance(others[idx], BuddyFunc):
-				others[idx] = others[idx].node
-		return BuddyFunc(self.model, self.model._apply(op, self.node, *others))
+	# boolean operations on BDDs
+	def __invert__(self) -> "BuddyNode": return self.model.apply("~", self)
+	def __and__(self, other : "BuddyNode") -> "BuddyNode": return self.model.apply("&", self, other)
+	def __sub__(self, other : "BuddyNode") -> "BuddyNode": return self & ~other
+	def __or__(self, other : "BuddyNode") -> "BuddyNode": return self.model.apply("|", self, other)
+	def __xor__(self, other : "BuddyNode") -> "BuddyNode": return self.model.apply("^", self, other)
+	def __lshift__(self, other : "BuddyNode") -> "BuddyNode": return self.model.apply("->", self, other)
+	def __rshift__(self, other : "BuddyNode") -> "BuddyNode": return other << self
+	def ite(self, if_true : "BuddyNode", if_false : "BuddyNode") -> "BuddyNode": return self.model.apply("ite", self, if_true, if_false)
+	def equiv(self, other : "BuddyNode") -> "BuddyNode": return self.model.apply("<->", self, other)
 
-	def __and__(self, other): return self.__call_op("&", other)
-	def __or__(self, other): return self.__call_op("|", other)
-	def __xor__(self, other): return self.__call_op("^", other)
-	def __geq__(self, other): return other <= self
-	def __leq__(self, other): return self.__call_op("->", other)
-	def __eq__(self, other): return self.__call_op("<->", other)
-	def __invert__(self): return self.__call_op("~")
-	def ite(self, if_true, if_false): return self.__call_op("ite", if_true, if_false)
+	# @cached_property
+	# def var_func(self) -> "BuddyNode":
+	# 	if self.node_id in [0,1]: return None
+	# 	return BuddyNode(self.model, self.model._bdd.bdd_ithvar(self.var_id))
 
-	@property
-	def var(self):
-		if self.node in [0,1]: return None
-		return BuddyFunc(self.model, self.model._bdd.bdd_ithvar(self.model._bdd.bdd_var(self.node)))
-	@property
-	def low(self): return BuddyFunc(self.model, self.model._bdd.bdd_low(self.node))
-	@property
-	def high(self): return BuddyFunc(self.model, self.model._bdd.bdd_high(self.node))
-	@property
-	def level(self): return self.model._bdd.bdd_level(self.node)
-	@property
-	def get_size(self): return self.model._bdd.bdd_nodecount(self.node)
-	@property
-	def count(self): return self.model._bdd.bdd_satcount(self.node)
-	@property
-	def support(self): return self.model._bdd.bdd_support(self.node)
+	@cached_property
+	def var(self) -> str:
+		if self.node_id in [0,1]: return None
+		return self.model._vars[self.model._bdd.bdd_var(self.node_id)]
 
-	def restrict(self, u : "BuddyFunc"):
-		# x = self.var(x) if val else self.nvar(x)
-		return BuddyFunc(self.model, self.model._bdd.bdd_restrict(self.node, u.node))
+	@cached_property
+	def low(self) -> "BuddyNode": 
+		return BuddyNode(self.model, self.model._bdd.bdd_low(self.node_id))
 
-	### reference counting and garbage
-	def incref(self): return self.model._bdd.bdd_addref(self.node)
-	def decref(self): return self.model._bdd.bdd_delref(self.node)
+	@cached_property
+	def high(self) -> "BuddyNode": 
+		return BuddyNode(self.model, self.model._bdd.bdd_high(self.node_id))
+
+	@cached_property
+	def level(self) -> int: 
+		return self.model._bdd.bdd_level(self.node_id)
+
+	@cached_property
+	def get_size(self) -> int: 
+		return self.model._bdd.bdd_nodecount(self.node_id)
+
+	@cached_property
+	def count(self) -> int: 
+		return self.model._bdd.bdd_satcount(self.node_id)
+		
+	# @cached_property
+	# def support(self) -> int: 
+	# 	return self.model._bdd.bdd_support(self.node_id) # remove ? 
+
+	def restrict(self, u : "BuddyNode") -> "BuddyNode": 
+		return BuddyNode(self.model, self.model._bdd.bdd_restrict(self.node_id, u.node_id))
+
+	## reference counting and garbage
+	# def incref(self): return self.model._bdd.bdd_addref(self.node)
+	# def decref(self): return self.model._bdd.bdd_delref(self.node)
 
 	def dump(self, filename="out.bdd"):
-		tempf = filename+".tmp"
 		if filename[-3:] == "dot":
-			self.model._bdd.bdd_fnprintdot(c_char_p(filename.encode("UTF-8")), self.node)
+			self.model._bdd.bdd_fnprintdot(c_char_p(filename.encode("UTF-8")), self.node_id)
 		if filename[-3:] == "pdf":
-			self.model._bdd.bdd_fnprintdot(c_char_p(tempf.encode("UTF-8")), self.node)
+			tempf = filename+".tmp"
+			self.model._bdd.bdd_fnprintdot(c_char_p(tempf.encode("UTF-8")), self.node_id)
 			os.system(f"dot -Tpdf {tempf} > {filename}")
 			os.remove(tempf)
-		# else:
-		# 	self.model._bdd.bdd_fnsave(c_char_p(filename.encode("UTF-8")), self.node)
-		# 	with open(filename+"v", "w") as f:
-		# 		for i in range(len(self.var_dict)):
-		# 			f.write(f"{self.var_dict[i]}\n")
-		# 		f.close()
+		else:
+			self.model._bdd.bdd_fnsave(c_char_p(filename.encode("UTF-8")), self.node_id)
+			with open(filename+"v", "w") as f:
+				f.write("\n".join(self.model._vars))
 
 class Buddy:
 	def __init__(self, vars: list, lib="/usr/local/lib/libbdd.so") -> None: 
@@ -78,38 +88,74 @@ class Buddy:
 		self._bdd = buddy
 
 		# generate dict for varnames
-		self.vars = vars
-		self.name2node = { x : k for k, x in enumerate(self.vars) }
+		self._vars = vars
+		self._name2var_id = { x : k for k, x in enumerate(self._vars) }
 
 	@property
-	def varcount(self) -> int: return len(self.vars)
+	def varcount(self) -> int: 
+		return len(self._vars)
 
 	# parses a formula according to python's internal parser
 	# this is probably the easiest way to add support for formulas...
-	def parse(self, formula : str) -> BuddyFunc:
-		def rec(node):
-			if isinstance(node, ast.Name):
-				if node.id not in self.name2node.keys():
-					raise Exception(f"Variable {node.id} not found!")
-				return self._bdd.bdd_ithvar(self.name2node[node.id])
-			elif isinstance(node, ast.Module):
-				return rec(node.body[0])
-			elif isinstance(node, ast.Expr):
-				return rec(node.value)
-			elif isinstance(node, ast.BinOp) and type(node.op) in { ast.BitOr, ast.BitXor, ast.BitAnd }:
-				op = { 
+	def node(self, formula : str) -> BuddyNode:
+		def rec(parsed_formula):
+			if isinstance(parsed_formula, ast.Module): # do nothing
+				return rec(parsed_formula.body[0])
+			elif isinstance(parsed_formula, ast.Expr): # do nothing
+				return rec(parsed_formula.value)
+			elif isinstance(parsed_formula, ast.Name): # is a variable
+				if parsed_formula.id not in self._name2var_id.keys():
+					raise Exception(f"Variable {parsed_formula.id} not found!")
+				return BuddyNode(self, self._bdd.bdd_ithvar(self._name2var_id[parsed_formula.id]))
+			elif isinstance(parsed_formula, ast.UnaryOp) and type(parsed_formula.op) in { ast.Invert, ast.Not }: # negation
+				return self.apply("~", rec(parsed_formula.operand))
+			elif isinstance(parsed_formula, ast.BinOp): # binary op
+				op2str = { 
 					ast.BitOr: "|",
 					ast.BitXor: "^",
-					ast.BitAnd: "&" }[type(node.op)]
-				return self._apply(op, rec(node.left), rec(node.right))
-			elif isinstance(node, ast.UnaryOp) and type(node.op) in { ast.Invert, ast.Not }:
-				return self._apply("~", node.operand)
+					ast.BitAnd: "&",
+					ast.LShift: "<-",
+					ast.RShift: "->",
+					ast.Sub: "-" }
+				assert type(parsed_formula.op) in op2str, type(parsed_formula.op)
+				op = op2str[type(parsed_formula.op)]
+				return self.apply(op, rec(parsed_formula.left), rec(parsed_formula.right))
 			else:
-				raise Exception(f"Node {node} of unknown type!")
-		return BuddyFunc(self, rec(ast.parse(formula)))
+				raise Exception(f"Node {parsed_formula} of unknown type!")
+		return rec(ast.parse(formula))
 
 	def __enter__(self): return self
 	def __exit__(self, exc_type, exc_value, exc_traceback): self._bdd.bdd_done()
+
+	@property
+	def false(self) -> BuddyNode:
+		return BuddyNode(self, self._bdd.bdd_false())
+
+	@property
+	def true(self) -> BuddyNode:
+		return BuddyNode(self, self._bdd.bdd_true())
+
+	def apply(self, op : str, u : BuddyNode, v : BuddyNode = None, w : BuddyNode = None) -> BuddyNode:
+		result = None	
+		if op in ('~', 'not', '!'):
+			result =  self._bdd.bdd_not(u.node_id)
+		elif op in ('or', r'\/', '|', '||'):
+			result =  self._bdd.bdd_or(u.node_id, v.node_id)
+		elif op in ('and', '/\\', '&', '&&', "band", "*", "land", "."):
+			result =  self._bdd.bdd_and(u.node_id, v.node_id)
+		elif op in ('xor', '^'):
+			result =  self._bdd.bdd_xor(u.node_id, v.node_id)
+		elif op in ('=>', '->', 'implies'):
+			result =  self._bdd.bdd_imp(u.node_id, v.node_id)
+		elif op in ('<=>', '<->', 'equiv'):
+			result =  self._bdd.bdd_biimp(u.node_id, v.node_id)
+		elif op in ('diff', '-'):
+			result =  self._bdd.bdd_ite(u.node_id, self._bdd.bdd_not(u.node_id), self.false.node_id)
+		elif op == 'ite':
+			result =  self._bdd.bdd_ite(u.node_id, v.node_id, w.node_id)
+		else:
+			raise Exception(f'Unknown operator "{op}"')
+		return BuddyNode(self, result)
 
 	def set_dynamic_reordering(self, type=True):
 		if type:
@@ -117,34 +163,6 @@ class Buddy:
 			self._bdd.bdd_enable_reorder()
 		else:
 			self._bdd.bdd_disable_reorder()
-
-	@property
-	def false(self):
-		return BuddyFunc(self, self._bdd.bdd_false())
-
-	@property
-	def true(self):
-		return BuddyFunc(self, self._bdd.bdd_true())
-
-	def _apply(self, op : str, u : int, v : int = None, w : int = None) -> int:
-		if op in ('~', 'not', '!'):
-			return self._bdd.bdd_not(u)
-		elif op in ('or', r'\/', '|', '||'):
-			return self._bdd.bdd_or(u, v)
-		elif op in ('and', '/\\', '&', '&&', "band", "*", "land", "."):
-			return self._bdd.bdd_and(u, v)
-		elif op in ('xor', '^'):
-			return self._bdd.bdd_xor(u, v)
-		elif op in ('=>', '->', 'implies'):
-			return self._bdd.bdd_imp(u, v)
-		elif op in ('<=>', '<->', 'equiv'):
-			return self._bdd.bdd_biimp(u, v)
-		elif op in ('diff', '-'):
-			return self._bdd.bdd_ite(u, self._bdd.bdd_not(u), self.false.node)
-		elif op == 'ite':
-			return self._bdd.bdd_ite(u, v, w)
-		else:
-			raise Exception(f'unknown operator "{op}"')
 
 	def add_reorder_vars(self):
 		self._bdd.bdd_varblockall()
@@ -154,11 +172,13 @@ class Buddy:
 		print("reorder via",rnames[method])
 		self._bdd.bdd_reorder(method)
 
-	def load(self, filename="in.bdd"):
+	@classmethod
+	def load(file_bdd, vars) -> Tuple["Buddy", BuddyNode]:
 		# returns new root node of read bdd
-		print(f"load {filename} ...")
+		# print(f"load {file_bdd} ...")
 		root = c_int()
-		self._bdd.bdd_fnload(c_char_p(filename.encode("UTF-8")), byref(root))
-		self.incref(root.value)
-		print(f"loaded {filename}")
-		return root.value
+		buddy = Buddy(vars)
+		buddy._bdd.bdd_fnload(c_char_p(file_bdd.encode("UTF-8")), byref(root))
+		buddy._bdd.bdd_addref(root.value)
+		# print(f"loaded {file_bdd}")
+		return buddy, BuddyNode(buddy, root.value)
