@@ -1,7 +1,7 @@
 import ast 
 import os
-from ctypes import CDLL, c_double, c_int, c_char_p, byref
-from functools import cached_property
+from ctypes import CDLL, c_double, c_int, c_char_p, byref, POINTER
+from functools import cached_property, cache
 from typing import Tuple
 
 class BuddyNode:
@@ -10,22 +10,58 @@ class BuddyNode:
 		self.model = model 
 
 	def __hash__(self): return self.node_id.__hash__()
+	def __eq__(self, other : "BuddyNode"): 
+		return isinstance(other, BuddyNode) and \
+			   self.model == other.model and \
+			   self.node_id == other.node_id
 
 	# boolean operations on BDDs
-	def __invert__(self) -> "BuddyNode": return self.model.apply("~", self)
-	def __and__(self, other : "BuddyNode") -> "BuddyNode": return self.model.apply("&", self, other)
-	def __sub__(self, other : "BuddyNode") -> "BuddyNode": return self & ~other
-	def __or__(self, other : "BuddyNode") -> "BuddyNode": return self.model.apply("|", self, other)
-	def __xor__(self, other : "BuddyNode") -> "BuddyNode": return self.model.apply("^", self, other)
-	def __lshift__(self, other : "BuddyNode") -> "BuddyNode": return self.model.apply("->", self, other)
-	def __rshift__(self, other : "BuddyNode") -> "BuddyNode": return other << self
-	def ite(self, if_true : "BuddyNode", if_false : "BuddyNode") -> "BuddyNode": return self.model.apply("ite", self, if_true, if_false)
-	def equiv(self, other : "BuddyNode") -> "BuddyNode": return self.model.apply("<->", self, other)
+	@cache
+	def __invert__(self) -> "BuddyNode": 
+		return self.model.apply("~", self)
+
+	@cache
+	def __and__(self, other : "BuddyNode") -> "BuddyNode": 
+		return self.model.apply("&", self, other)
+
+	@cache
+	def __sub__(self, other : "BuddyNode") -> "BuddyNode": 
+		return self & ~other
+
+	@cache
+	def __or__(self, other : "BuddyNode") -> "BuddyNode": 
+		return self.model.apply("|", self, other)
+
+	@cache
+	def __xor__(self, other : "BuddyNode") -> "BuddyNode": 
+		return self.model.apply("^", self, other)
+
+	@cache
+	def __lshift__(self, other : "BuddyNode") -> "BuddyNode": 
+		return self.model.apply("->", self, other)
+
+	@cache
+	def __rshift__(self, other : "BuddyNode") -> "BuddyNode": 
+		return other << self
+
+	@cache
+	def ite(self, if_true : "BuddyNode", if_false : "BuddyNode") -> "BuddyNode": 
+		return self.model.apply("ite", self, if_true, if_false)
+
+	@cache
+	def equiv(self, other : "BuddyNode") -> "BuddyNode": 
+		return self.model.apply("<->", self, other)
 
 	# @cached_property
 	# def var_func(self) -> "BuddyNode":
 	# 	if self.node_id in [0,1]: return None
 	# 	return BuddyNode(self.model, self.model._bdd.bdd_ithvar(self.var_id))
+
+	@cache
+	def flip(self, var : str) -> "BuddyNode":
+		xf = self.model.node(var)
+		f0, f1 = self.restrict(~xf), self.restrict(xf)
+		return xf.ite(f0, f1)	
 
 	@cached_property
 	def var(self) -> str:
@@ -49,13 +85,28 @@ class BuddyNode:
 		return self.model._bdd.bdd_nodecount(self.node_id)
 
 	@cached_property
-	def count(self) -> int: 
+	def satcount(self) -> int: 
 		return self.model._bdd.bdd_satcount(self.node_id)
+
+	@cached_property
+	def nodecount(self) -> int:
+		return self.model._bdd.bdd_nodecount(self.node_id)
 		
 	# @cached_property
 	# def support(self) -> int: 
 	# 	return self.model._bdd.bdd_support(self.node_id) # remove ? 
 
+	@cached_property
+	def var_profile(self) -> dict[str, int]:
+		# returns a variable-int-dictionary that counts how often variable nodes occur in this function
+		profile = self.model._bdd.bdd_varprofile(self.node_id)
+		return { var: count for var, count in zip(self.model._vars, profile.contents ) }
+
+	@cached_property 
+	def depends_on(self) -> set[str]:
+		return set(v for v,c in self.var_profile.items() if c > 0)
+
+	@cache
 	def restrict(self, u : "BuddyNode") -> "BuddyNode": 
 		return BuddyNode(self.model, self.model._bdd.bdd_restrict(self.node_id, u.node_id))
 
@@ -80,6 +131,7 @@ class Buddy:
 	def __init__(self, vars: list, lib="/usr/local/lib/libbdd.so") -> None: 
 		buddy = CDLL(lib)
 
+		buddy.bdd_varprofile.restype = POINTER(c_int * len(vars))
 		buddy.bdd_satcount.restype = c_double
 		buddy.bdd_init(1<<26, 1<<20)
 		buddy.bdd_setmaxincrease(1<<27)

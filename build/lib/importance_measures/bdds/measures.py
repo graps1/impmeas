@@ -1,53 +1,69 @@
+from collections import defaultdict
 from .buddy import BuddyNode
-from functools import lru_cache 
+from functools import lru_cache, cache
 
-def u_influence(f : BuddyNode, x : str, monotone_in_x=False):
+def influence(f : BuddyNode, x : str, monotone_in_x=False):
     # computes the unnormalized influence (ie influence * 2**#variables)
     xf = f.model.node(x)
     f1, f0 = f.restrict(xf), f.restrict(~xf)
     if monotone_in_x:
-        return (f1.count - f0.count)
+        return (f1.satcount - f0.satcount) / 2**f.model.varcount
     else:
-        return (f1 ^ f0).count
+        return (f1 ^ f0).satcount / 2**f.model.varcount
 
-def u_blame(f : BuddyNode, x : str, rho=lambda x: 1/(x+1)):
+def blame(f : BuddyNode, x : str, rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=False):
+    if debug: print(f"=== COMPUTING BLAME for {x} in BDD with size {f.nodecount} ===")
     model = f.model
-    xf = model.node(x)
 
-    @lru_cache(maxsize=10000)
-    def g(f,c,k,Y):
-        if k == 0:
-            f0, f1 = f.restrict(~xf), f.restrict(xf)
-            f_x = xf.ite(f0, f1) # flips x
-            return (f^f_x) - (f^c)
+    @cache
+    def g(f,h,k,Y):
+        if x not in f.depends_on:
+            return model.false
+        elif k == 0:
+            return (f ^ f.flip(x)) - (f ^ h)
         else:
-            result = model.false 
+            result = g(f,h,k-1,Y)
             for y in Y:
-                Y_minus_y = list(Y)
-                Y_minus_y.remove(y)
-                Y_minus_y = tuple(Y_minus_y)
-                yf = model.node(y)
-                f0, f1 = f.restrict(~yf), f.restrict(yf)
-                g0 = g(f0,c,k-1,Y_minus_y) # cannot be written as g0, g1 = ...
-                g1 = g(f1,c,k-1,Y_minus_y) # don't know why, but leads to crash
-                result |= yf.ite(g0, g1)
+                Y_min_y = list(Y)
+                Y_min_y.remove(y)
+                result |= g(f.flip(y), h, k-1, tuple(Y_min_y))
             return result
 
-    @lru_cache(maxsize=10000)
-    def ell(f,c,k):
-        result = model.true
-        Y = tuple(set(model._vars) - { x })
-        for i in range(k): result &= ~g(f, c, i, Y)
-        return result & g(f, c, k, Y) 
-
     result = 0
-    for k in range(model.varcount): 
-        if rho(k) > 0:
-            term = f.ite(ell(f, model.true, k), ell(f, model.false, k))
-            result += rho(k)*term.count
-    return result
+    last_g = model.false
+    ub_max_increase = 1 
+    stopped_earlier = False
+    for k in range(model.varcount):
+        # early stopping criteria
+        if rho(k) == 0:
+            if debug: print("stopped because rho({k}) = 0")
+            stopped_earlier = True
+            break
+        if ub_max_increase <= cutoff:
+            if debug: 
+                print("stopped earlier because cannot improve above cutoff.")
+                print(f"current value: {result:.4f}, can be increased by {ub_max_increase:.4f} <= {cutoff:.4f}.")
+            stopped_earlier = True
+            break
+        new_g = g(f, f, k, tuple(f.depends_on - { x }))
+        if last_g == new_g: # is this valid?
+            break
+        ell = new_g & ~last_g
+        last_g = new_g
+        d_result = rho(k)*ell.satcount / 2**model.varcount
+        result = result + d_result
+        ub_max_increase = rho(k+1)*(1 - new_g.satcount / 2**model.varcount)
+        if debug: 
+            print(f"k {k}", end=" ")
+            print(f"size g {new_g.nodecount}", end=" ")
+            print(f"size ell {ell.nodecount}", end=" ") 
+            print(f"d result {d_result:.4f}", end=" ")
+            print(f"max increase possible {ub_max_increase:.4f}")
+    if not stopped_earlier: ub_max_increase = 0
+    if debug: print(f"=== DONE ===")
+    return result, result + ub_max_increase
 
-@lru_cache(maxsize=10000)
+@cache
 def omega(f : BuddyNode):
     if f.var is None:
         return f
