@@ -6,7 +6,8 @@ setup(
         packages=find_packages(
             include=[
                 "importance_measures",
-                "importance_measures.bdds"
+                "importance_measures.bdds",
+                "importance_measures.sharpSAT"
             ],
             exclude=[
                 "importance_measures.tests",

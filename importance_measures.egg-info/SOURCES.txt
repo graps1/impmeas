@@ -15,3 +15,7 @@ importance_measures.egg-info/top_level.txt
 importance_measures/bdds/__init__.py
 importance_measures/bdds/buddy.py
 importance_measures/bdds/measures.py
+importance_measures/sharpSAT/__init__.py
+importance_measures/sharpSAT/formula.py
+importance_measures/sharpSAT/measures.py
+importance_measures/sharpSAT/sharpSAT.py
