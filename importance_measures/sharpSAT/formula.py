@@ -4,47 +4,77 @@ from functools import cached_property, cache
 # import re
 # VARS_RE = re.compile(r"([a-zA-Z_][a-zA-Z_0-9]*)")
 
-def tseytin(formula : "Formula", vars2idx=dict()):
-    def subformulas(cur, counter, sequence):
+# doesn't seem that necessary
+# class CNF:
+#     def __init__(self, cnf : list[set]):
+#         self.cnf = cnf
+# 
+#     def cofactor(self, var, val) -> "CNF":
+#         if not val: return self.cofactor(-var, True)
+#         ret = []
+#         for clause in self.cnf:
+#             if var in clause: continue
+#             elif -var in clause: ret.append(clause - { -var })
+#             else: ret.append(clause)
+#         return CNF(ret)
+#     
+#     def flip(self, var) -> "CNF":
+#         ret = []
+#         for clause in self.cnf:
+#             if var in clause: ret.append((clause - { var }) | { -var })
+#             elif -var in clause: ret.append((clause - { -var }) | { var })
+#             else: ret.append(clause)
+#         return CNF(ret)
+
+
+def tseytin(formula : "Formula", vars2idx=dict()) -> tuple[list[set], dict[str, int]]:
+    def rec(cur, counter, dictionary):
         if isinstance(cur, str): # is a variable
-            y = cur
-            sequence.append((y,y))
-            return y, counter
+            if cur not in dictionary: dictionary[cur] = cur
+            return cur, counter
         op = cur[0]
         if op == "~":
-            indicator, counter = subformulas(cur[1], counter, sequence)
-            y = f"___tseytin_y{counter}"
-            sequence.append( (y, ("~", indicator)) )
-            return y, counter + 1
+            indicator, counter = rec(cur[1], counter, dictionary)
+            val = ("~", indicator)
+            if val not in dictionary:
+                y = f"___tseytin_y{counter}" 
+                dictionary[val] = y 
+                counter += 1
+            else: y = dictionary[val]
+            return y, counter
         
-        left, counter = subformulas(cur[1], counter, sequence)
-        right, counter = subformulas(cur[2], counter, sequence)
-        y = f"___tseytin_y{counter}" 
-        sequence.append((y, (left, op, right)))
+        left, counter = rec(cur[1], counter, dictionary)
+        right, counter = rec(cur[2], counter, dictionary)
+        val = (op, left, right)
+        if val not in dictionary: 
+            y = f"___tseytin_y{counter}" 
+            dictionary[val] = y
+            counter += 1
+        else: y = dictionary[val]
         return y, counter + 1
-    sequence = []
-    ylast, _ = subformulas(formula.tree, 0, sequence)
+    dictionary = {} 
+    ylast, _ = rec(formula.tree, 0, dictionary)
 
     # print(sequence)
     # src: https://en.wikipedia.org/wiki/Tseytin_transformation
-    vars = set(indicator for indicator,_ in sequence)
+    vars = set(indicator for _,indicator in dictionary.items())
     vars = { v: idx+1 for idx,v in enumerate(vars)} | vars2idx
-    cnf = [ [ vars[ylast] ] ]
-    for indicator, rhs in sequence:
+    cnf = [ { vars[ylast] } ]
+    for lhs, indicator in dictionary.items():
         C = vars[indicator]
-        if isinstance(rhs, str):
+        if isinstance(lhs, str):
             continue
-        if isinstance(rhs, tuple) and len(rhs) == 2: # negation
-            A = vars[rhs[1]]
-            cnf += [[-C, -A], [C, A]]
-        if isinstance(rhs, tuple) and len(rhs) == 3:
-            A, op, B = vars[rhs[0]], rhs[1], vars[rhs[2]]
+        if isinstance(lhs, tuple) and len(lhs) == 2: # negation
+            A = vars[lhs[1]]
+            cnf += [{-C, -A}, {C, A}]
+        if isinstance(lhs, tuple) and len(lhs) == 3:
+            op, A, B = lhs[0], vars[lhs[1]], vars[lhs[2]]
             if op == "^":
-                cnf += [[-C, -A, -B], [-C, A, B], [C, -A, B], [C, A, -B]]
+                cnf += [{-C, -A, -B}, {-C, A, B}, {C, -A, B}, {C, A, -B}]
             elif op == "&":
-                cnf += [[-A, -B, C], [A, -C], [B, -C]]
+                cnf += [{-A, -B, C}, {A, -C}, {B, -C}]
             elif op == "|":
-                cnf += [[A, B, -C], [-A, C], [-B, C]]
+                cnf += [{A, B, -C}, {-A, C}, {-B, C}]
             else:
                 raise Exception(f"operation {op} unknown!")
     return cnf, vars
@@ -79,10 +109,10 @@ class Formula:
                     # ast.RShift: "->",
                     # ast.Sub: "-" }
                 assert type(parsed_formula.op) in op2str, type(parsed_formula.op)
-                indicator_left = rec(parsed_formula.left)
-                indicator_right = rec(parsed_formula.right)
                 op = op2str[type(parsed_formula.op)]
-                return ( op, indicator_left, indicator_right )
+                left = rec(parsed_formula.left)
+                right = rec(parsed_formula.right)
+                return ( op, left, right )
             else:
                 raise Exception(f"Node {parsed_formula} of unknown type!")
         return Formula(rec(ast.parse(formula)))
@@ -151,10 +181,10 @@ class Formula:
         return rec(self.tree)
 
     @cached_property
-    def cnf(self) -> tuple[list[list[int]], dict[str, int]]:
+    def cnf(self) -> tuple[list[set], dict[str, int]]:
         return tseytin(self)
 
-    def flip(self, var):
+    def flip(self, var : str) -> "Formula":
         def rec(cur):
             if isinstance(cur, str):
                 if cur == var: return ("~", cur)

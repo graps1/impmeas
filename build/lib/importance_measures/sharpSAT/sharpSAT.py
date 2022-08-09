@@ -19,21 +19,25 @@ def cnf2dimacs(cnf):
     return ret
 
 class SharpSAT:
-    def __init__(self, src = "/usr/local/bin/sharpSAT", tmp_filename = "/tmp/dimacs.cnf"):
+    def __init__(self, 
+        src = "/usr/local/bin/sharpSAT", 
+        tmp_filename = "/tmp/dimacs.cnf",
+        decot=1, decow=100, tmpdir="/tmp", cs=3500):
         self.__solver_dir = "/".join(src.split("/")[:-1])
         self.__solver_name = src.split("/")[-1]
         self.__tmp_filename = tmp_filename
+        self.__args = { "decot": decot, "decow": decow, "tmpdir": tmpdir, "cs": cs } 
 
     def satcount_file(self, cnf_file, debug=False):
         cnf_file_abs = os.path.abspath(cnf_file)
+        opt_args = " ".join(f"-{key} {arg}" for key, arg in self.__args.items())
         command =  f'''
             cd {self.__solver_dir} && 
-            {self.__solver_dir}/{self.__solver_name} -WE -decot 1 -decow 100 -tmpdir /tmp -cs 3500 {cnf_file_abs}
+            {self.__solver_dir}/{self.__solver_name} -WE {opt_args} {cnf_file_abs}
         '''
         ret = os.popen(command).read()
         if debug: print(ret)
         satcount = int(float(re.findall(r"c s exact arb float (.*)", ret)[0]))
-        # satcount = int(float((ret.split("\n")[-2].split(" ")[-1])))
         return satcount 
 
     def satcount(self, cnf, debug=False):

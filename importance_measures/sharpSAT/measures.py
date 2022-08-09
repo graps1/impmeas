@@ -4,8 +4,8 @@ from functools import cache
 def influence(f : Formula, x : str, solver : SharpSAT, debug=False):
     left = f.cofactor(x, False) 
     right = f.cofactor(x, True) 
-    cnf, _ = (left ^ right).cnf
-    return solver.satcount(cnf, debug=debug) / 2**(len(f.vars)-1)
+    target = left ^ right
+    return solver.satcount(target, debug=debug) / 2**(len(f.vars)-1)
     
 def blame(f : Formula, x : str, solver : SharpSAT, 
     rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=False):
@@ -53,7 +53,7 @@ def blame(f : Formula, x : str, solver : SharpSAT,
         ub_max_increase = rho(k+1)*(1 - solver.satcount(new_g, debug=False) / 2**varcount)
         if debug: 
             print(f"k {k}", end=" ")
-            print(f"size g {len(str(g))}", end=" ")
+            print(f"size g {len(str(last_g))}", end=" ")
             print(f"size ell {len(str(ell))}", end=" ") 
             print(f"d result {d_result:.4f}", end=" ")
             print(f"max increase possible {ub_max_increase:.4f}")
