@@ -16,17 +16,16 @@ def blame(f : BuddyNode, x : str, rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=Fa
     model = f.model
 
     @cache
-    def g(f,h,k,Y):
+    def g(f,c,k):
         if x not in f.depends_on:
             return model.false
         elif k == 0:
-            return (f ^ f.flip(x)) - (f ^ h)
+            return (f ^ f.flip(x)) - (f ^ c)
         else:
-            result = g(f,h,k-1,Y)
-            for y in Y:
-                Y_min_y = list(Y)
-                Y_min_y.remove(y)
-                result |= g(f.flip(y), h, k-1, tuple(Y_min_y))
+            g_last = g(f,c,k-1)
+            result = g_last
+            for y in f.depends_on - { x }:
+                result |= g_last.flip(y)
             return result
 
     result = 0
@@ -45,7 +44,7 @@ def blame(f : BuddyNode, x : str, rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=Fa
                 print(f"current value: {result:.4f}, can be increased by {ub_max_increase:.4f} <= {cutoff:.4f}.")
             stopped_earlier = True
             break
-        new_g = g(f, f, k, tuple(f.depends_on - { x }))
+        new_g = f.ite(g(f, model.true, k), g(f, model.false, k) )
         if last_g == new_g: # is this valid?
             break
         ell = new_g & ~last_g
