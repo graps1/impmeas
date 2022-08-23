@@ -7,10 +7,11 @@ setup(
             include=[
                 "impmeas",
                 "impmeas.bdds",
-                "impmeas.mc"
+                "impmeas.mc",
+                "impmeas.table"
             ],
             exclude=[
-                "impmeas.tests",
+                "tests",
                 "impmeas.notebooks"
             ]
         )
