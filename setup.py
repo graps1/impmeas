@@ -7,7 +7,7 @@ setup(
             include=[
                 "importance_measures",
                 "importance_measures.bdds",
-                "importance_measures.sharpSAT"
+                "importance_measures.mc"
             ],
             exclude=[
                 "importance_measures.tests",

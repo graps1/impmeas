@@ -1,8 +1,7 @@
-from collections import defaultdict
-from .buddy import BuddyNode
-from functools import lru_cache, cache
+from formulas import BuddyNode
+from functools import cache
 
-def influence(f : BuddyNode, x : str, monotone_in_x=False):
+def influence(f: BuddyNode, x: str, monotone_in_x=False):
     # computes the unnormalized influence (ie influence * 2**#variables)
     xf = f.model.node(x)
     f1, f0 = f.restrict(xf), f.restrict(~xf)
@@ -11,7 +10,7 @@ def influence(f : BuddyNode, x : str, monotone_in_x=False):
     else:
         return (f1 ^ f0).satcount / 2**f.model.varcount
 
-def blame(f : BuddyNode, x : str, rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=False):
+def blame(f: BuddyNode, x: str, rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=False):
     if debug: print(f"=== COMPUTING BLAME for {x} in BDD with size {f.nodecount} ===")
     model = f.model
 
@@ -29,41 +28,52 @@ def blame(f : BuddyNode, x : str, rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=Fa
             return result
 
     result = 0
-    last_g = model.false
+    last_ell_sc = 0 # model.false
     ub_max_increase = 1 
-    stopped_earlier = False
+    last_g_high, last_g_low = model.false, model.false
+    stopping_reason = "finished iteration."
     for k in range(model.varcount):
+        if debug and k > 0: print()
+        if debug: print(f"k={k}", end=" ")
+
         # early stopping criteria
         if rho(k) == 0:
-            if debug: print("stopped because rho({k}) = 0")
-            stopped_earlier = True
+            stopping_reason = f"stopped because rho({k}) = 0"
             break
-        if ub_max_increase <= cutoff:
-            if debug: 
-                print("stopped earlier because cannot improve above cutoff.")
-                print(f"current value: {result:.4f}, can be increased by {ub_max_increase:.4f} <= {cutoff:.4f}.")
-            stopped_earlier = True
+
+        g_high, g_low = g(f, model.true, k), g(f, model.false, k)
+        if last_g_high == g_high and last_g_low == g_low:
+            stopping_reason = f"stopped earlier because no change in g(f,0,k) and g(f,1,k) occurred."
+            ub_max_increase = 0
             break
-        new_g = f.ite(g(f, model.true, k), g(f, model.false, k) )
-        if last_g == new_g: # is this valid?
-            break
-        ell = new_g & ~last_g
-        last_g = new_g
-        d_result = rho(k)*ell.satcount / 2**model.varcount
+        last_g_high, last_g_low = g_high, g_low
+
+        new_ell = f.ite(g_high, g_low)
+        if debug: print(f"size ell={new_ell.nodecount}", end=" ")
+
+        t_sc = new_ell.satcount - last_ell_sc
+        last_ell_sc = new_ell.satcount
+
+        d_result = rho(k)*t_sc / 2**model.varcount
+        if debug: print(f"d result={d_result:.4f}", end=" ")
         result = result + d_result
-        ub_max_increase = rho(k+1)*(1 - new_g.satcount / 2**model.varcount)
-        if debug: 
-            print(f"k {k}", end=" ")
-            print(f"size g {new_g.nodecount}", end=" ")
-            print(f"size ell {ell.nodecount}", end=" ") 
-            print(f"d result {d_result:.4f}", end=" ")
-            print(f"max increase possible {ub_max_increase:.4f}")
-    if not stopped_earlier: ub_max_increase = 0
-    if debug: print(f"=== DONE ===")
+        ub_max_increase = rho(k+1)*(1 - new_ell.satcount / 2**model.varcount)
+        if debug: print(f"max increase possible={ub_max_increase:.4f}", end=" ")
+
+        if ub_max_increase <= cutoff:
+            stopping_reason = f"stopped earlier because cannot improve above cutoff.\ncurrent value: {result:.4f}, can be increased by {ub_max_increase:.4f} <= {cutoff:.4f}."
+            break
+
+        ub_max_increase = 0
+
+    if debug: 
+        print()
+        print(stopping_reason)
+        print(f"=== DONE ===")
     return result, result + ub_max_increase
 
 @cache
-def omega(f : BuddyNode):
+def omega(f: BuddyNode):
     if f.var is None:
         return f
     else:
