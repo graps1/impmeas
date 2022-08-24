@@ -1,51 +1,68 @@
-from typing import Callable, Dict, Set, Tuple, List, Any
+from functools import cache 
+from formulas import Table
+        
 
-from .binfunc import func
-from .binvec import vec, incidence, itervecs
+def blame(f: Table, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, debug=False):
+    # todo: this is (almost) the exact same code as for the BDD based approach...
+    # can probably be merged...
+    if debug: print(f"=== COMPUTING BLAME for {x} in Table with size {len(f.table)} ===")
 
-def k(u : vec, f : func, target_value=1) -> Set[str]:
-  # returns the minimal number of flips needed in u 
-  # to change the value of f[u] to `target_value`
-  queue = [ set() ]
-  u = u.restrict(f.vars)
-  while len(queue) > 0:
-    v = queue.pop(0)
-    if f[u ^ incidence(v, f.vars)] == target_value:
-      return len(v)
-    else:
-      neighbours = [ v.union({var}) for var in f.vars if var not in v ]
-      queue += neighbours
-  return float("inf")
+    @cache
+    def g(f,c,k):
+        if x not in f.vars:
+            return f.ctx.false
+        elif k == 0:
+            return f & ~f.flip(x) if c == 1 else ~f & f.flip(x)
+        else:
+            g_last = g(f,c,k-1)
+            result = g_last
+            for y in set(f.vars) - { x }:
+                result |= g_last.flip(y)
+            return result
 
-def r(x : str, u : vec, f : func, c=None) -> Set[str]:
-  if x not in f.vars:
-    return float("inf")
-  if c is None:
-    c = f[u]
-  u = u.restrict(f.vars)
-  queue = [ set() ]
-  while len(queue) > 0:
-    v = queue.pop(0)
-    uxorv = u ^ incidence(v, f.vars)
-    if f[uxorv] == c and f[uxorv ^ incidence(x, f.vars)] != c:
-      return len(v)
-    else:
-      neighbours = [ v | {y} for y in f.vars if y!=x and y not in v ]
-      queue += neighbours
-  return float("inf")
+    result = 0
+    last_ell_sc = 0
+    ub_max_increase = 1 
+    last_g_high, last_g_low = f.ctx.false, f.ctx.false
+    stopping_reason = "finished iteration."
+    for k in range(len(f.vars)):
+        if debug and k > 0: print()
+        if debug: print(f"k={k}", end=" ")
 
-def blame(
-    x : str,
-    f : func, 
-    rho : Callable[[float], float] = lambda x: 1/(x+1) 
-  ) -> float:
-  return sum( rho(r(x, vec, f)) for vec in itervecs(f.vars) )/2**f.varcount
+        # early stopping criteria
+        if rho(k) == 0:
+            stopping_reason = f"stopped because rho({k}) = 0"
+            break
 
-def r_table(f : func) -> Tuple[List[List[int]], List[str]]:
-  table, headers = f.table()
-  headers += [ f"phi_{var}^u({f.name})" for var in f.vars_ordered ]
-  for idx in range(len(table)):
-    row = table[idx]
-    u = vec({ f.vars_ordered[idx]: val for idx, val in enumerate(row[:-1]) })
-    row += [ r(var, u, f) for var in f.vars_ordered ]
-  return table, headers
+        g_high, g_low = g(f, 1, k), g(f, 0, k)
+        if last_g_high == g_high and last_g_low == g_low:
+            stopping_reason = f"stopped earlier because no change in g(f,0,k) and g(f,1,k) occurred."
+            ub_max_increase = 0
+            break
+        last_g_high, last_g_low = g_high, g_low
+
+        new_ell = (f&g_high) | (~f&g_low)
+
+        new_ell_sc = new_ell.satcount()
+        t_sc = new_ell_sc - last_ell_sc
+        last_ell_sc = new_ell_sc
+
+        d_result = rho(k)*t_sc / 2**len(f.vars)
+        if debug: print(f"d result={d_result:.4f}", end=" ")
+        result = result + d_result
+        ub_max_increase = rho(k+1)*(1 - new_ell_sc / 2**len(f.vars))
+        if debug: print(f"max increase possible={ub_max_increase:.4f}", end=" ")
+
+        if ub_max_increase <= cutoff:
+            stopping_reason = f"stopped earlier because cannot improve above cutoff.\n" + \
+                              f"current value: {result:.4f}, can be increased by "+\
+                              f"{ub_max_increase:.4f} <= {cutoff:.4f}."
+            break
+
+        ub_max_increase = 0
+
+    if debug: 
+        print()
+        print(stopping_reason)
+        print(f"=== DONE ===")
+    return result, result + ub_max_increase
