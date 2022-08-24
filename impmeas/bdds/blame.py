@@ -1,14 +1,6 @@
 from formulas import BuddyNode
 from functools import cache
 
-def influence(f: BuddyNode, x: str, monotone_in_x=False):
-    # computes the unnormalized influence (ie influence * 2**#variables)
-    f0, f1 =  f.branch(x)
-    if monotone_in_x:
-        return (f1.satcount() - f0.satcount()) / 2**f.ctx.varcount
-    else:
-        return (f1 ^ f0).satcount() / 2**f.ctx.varcount
-
 def blame(f: BuddyNode, x: str, rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=False):
     if debug: print(f"=== COMPUTING BLAME for {x} in BDD with size {f.nodecount} ===")
 
@@ -72,13 +64,3 @@ def blame(f: BuddyNode, x: str, rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=Fals
         print(stopping_reason)
         print(f"=== DONE ===")
     return result, result + ub_max_increase
-
-@cache
-def omega(f: BuddyNode):
-    if f.var is None:
-        return f
-    else:
-        low, high = f.low, f.high
-        low_tf = omega(low & high)
-        high_tf = omega(low) | omega(high)
-        return f.ctx.var(f.var).ite(high_tf, low_tf)
