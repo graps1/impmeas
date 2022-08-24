@@ -1,5 +1,4 @@
 from formulas import Formula
-from functools import cache
 from itertools import count
 from typing import Iterable, Union
 from .utils import at_most_cnf
@@ -33,10 +32,6 @@ def resp_counts(f: Formula, x: str, debug=False) -> Iterable[int]:
         if debug: print(f"k={k}", end=" ")
         if debug: print(f"size of cnf: {len(new_cnf)}", end=" ")
         yield k, solver.satcount(cnf + cnf_leqk, exists=exists)
-
-def influence(f: Formula, x: str, debug=False):
-    f0, f1 = f.branch(x)
-    return (f0 ^ f1).satcount() / 2**(len(f.vars)-1)
     
 def blame(f: Formula, x: str, rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=False):
     if debug: print(f"=== COMPUTING BLAME for {x} in Formula with size {len(str(f))} ===")
