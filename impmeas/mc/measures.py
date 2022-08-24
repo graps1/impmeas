@@ -1,20 +1,24 @@
-from formulas import GPMC, Formula
+from formulas import Formula
 from functools import cache
 from itertools import count
 from typing import Iterable, Union
 from .utils import at_most_cnf
 
-def resp_counts(f: Formula, x: str, solver: GPMC, debug=False) -> Iterable[int]:
+def resp_counts(f: Formula, x: str, debug=False) -> Iterable[int]:
+    assert f.ctx.solver is not None
+    solver = f.ctx.solver
+
     new_flip_vars = { f"__z_{y}": y for y in f.vars-{x} }
-    replacements = { new_flip_vars[z]: Formula.parse(f"{z} ^{new_flip_vars[z]}") \
+    replacements = { new_flip_vars[z]: f.ctx.parse(f"{z} ^ {new_flip_vars[z]}") \
                      for z in new_flip_vars }
-    f_ = f.replace(replacements)
-    f_x = f_.flip(x)
-    inner = (f & f_ & ~f_x) | (~f & ~f_ & f_x)
+    f_flip_vars = f.replace(replacements)
+    f_flip_vars_x = f_flip_vars.flip(x)
+    inner = (f & f_flip_vars & ~f_flip_vars_x) | (~f & ~f_flip_vars & f_flip_vars_x)
 
     cnf, sub2idx = inner.tseitin()
-    new_flip_vars = { sub2idx[Formula.parse(p)] for p in new_flip_vars } # to index
-    tseitin_vars = set(sub2idx.values()) - { sub2idx[Formula.parse(p)] for p in f.vars }
+    new_flip_var_ids = { sub2idx[f.ctx.var(p)] for p in new_flip_vars } # to index
+    orig_var_ids = { sub2idx[f.ctx.var(p)] for p in f.vars }
+    all_var_ids = set(sub2idx.values())
 
     # new_card_vars: set[int]
     # new_flip_vars: set[int]
@@ -22,19 +26,19 @@ def resp_counts(f: Formula, x: str, solver: GPMC, debug=False) -> Iterable[int]:
     # tseitin_vars: set[int]
 
     for k in count(): 
-        cnf_leqk, new_leqk_vars = at_most_cnf(k, new_flip_vars, max(max(c) for c in cnf)+1)
-        exists = tseitin_vars | new_leqk_vars
+        cnf_leqk, new_leqk_vars = at_most_cnf(k, new_flip_var_ids, max(max(c) for c in cnf)+1)
+        exists = (all_var_ids - orig_var_ids) | new_leqk_vars
         new_cnf = cnf + cnf_leqk
         if debug and k > 0: print()
         if debug: print(f"k={k}", end=" ")
         if debug: print(f"size of cnf: {len(new_cnf)}", end=" ")
         yield k, solver.satcount(cnf + cnf_leqk, exists=exists)
 
-def influence(f: Formula, x: str, solver: GPMC, debug=False):
-    high, low = f.cofactor(x, True), f.cofactor(x, False)
-    return solver.satcount(high ^ low, debug=debug) / 2**(len(f.vars)-1)
+def influence(f: Formula, x: str, debug=False):
+    f0, f1 = f.branch(x)
+    return (f0 ^ f1).satcount() / 2**(len(f.vars)-1)
     
-def blame(f: Formula, x: str, solver: GPMC, rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=False):
+def blame(f: Formula, x: str, rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=False):
     if debug: print(f"=== COMPUTING BLAME for {x} in Formula with size {len(str(f))} ===")
 
     result = 0
@@ -43,7 +47,7 @@ def blame(f: Formula, x: str, solver: GPMC, rho=lambda x: 1/(x+1), cutoff = 1e-4
     stopping_reason = "finished iteration."
     varcount = len(f.vars)
     last_ell_sc = 0
-    for k, ell_satcount in resp_counts(f, x, solver, debug=debug):
+    for k, ell_satcount in resp_counts(f, x, debug=debug):
         if k == varcount-1: break
 
         # early stopping criteria
@@ -51,8 +55,6 @@ def blame(f: Formula, x: str, solver: GPMC, rho=lambda x: 1/(x+1), cutoff = 1e-4
             stopping_reason = "stopped because rho({k}) = 0"
             stopped_earlier = True
             break
-
-        # if debug: print(f"size ell={len(new_ell)}", end=" ")
 
         t_sc = ell_satcount - last_ell_sc 
         last_ell_sc = ell_satcount
