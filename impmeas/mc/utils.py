@@ -21,6 +21,9 @@ def at_most(ctx: FormulaContext, k: int, X: set, new_var_prefix="__z_") -> tuple
 
 
 def at_most_cnf(k: int, X: set, start_idx: int) -> tuple[list[list[int]], set]:
+    assert k >= 0
+    if k >= len(X): return [], set()
+
     n = len(X)
     X = list(X)
     Z = {(i,l) for i in range(k+1) for l in range(i,n)}

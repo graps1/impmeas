@@ -2,6 +2,8 @@ from formulas import BuddyNode
 from functools import cache
 
 def blame(f: BuddyNode, x: str, rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=False):
+    if x not in f.vars: return 0, 0
+
     if debug: print(f"=== COMPUTING BLAME for {x} in BDD with size {f.nodecount} ===")
 
     @cache

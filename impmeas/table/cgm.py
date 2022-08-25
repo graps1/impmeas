@@ -40,6 +40,7 @@ def hcgm(f: Table, S: set[str], rho = lambda x: 4*(0.5-x)**2) -> float:
     return mean
 
 def bz_hcgm(f: Table, x: str, rho = lambda x: 4*(0.5-x)**2) -> float:
+    if x not in f.vars: return 0
     result = 0
     for Sass in iter_assignments(set(f.vars)-{x}): 
         S = { y for y in Sass if Sass[y] } # assignment to set
