@@ -25,7 +25,7 @@ def resp_counts(f: Formula, x: str, debug=False) -> Iterable[int]:
     # tseitin_vars: set[int]
 
     for k in count(): 
-        cnf_leqk, new_leqk_vars = at_most_cnf(k, new_flip_var_ids, max(max(c) for c in cnf)+1)
+        cnf_leqk, new_leqk_vars = at_most_cnf(k, new_flip_var_ids, max(max(map(abs,c)) for c in cnf)+1)
         exists = (all_var_ids - orig_var_ids) | new_leqk_vars
         new_cnf = cnf + cnf_leqk
         if debug and k > 0: print()
@@ -34,6 +34,8 @@ def resp_counts(f: Formula, x: str, debug=False) -> Iterable[int]:
         yield k, solver.satcount(cnf + cnf_leqk, exists=exists)
     
 def blame(f: Formula, x: str, rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=False):
+    if x not in f.vars: return 0
+
     if debug: print(f"=== COMPUTING BLAME for {x} in Formula with size {len(str(f))} ===")
 
     result = 0
