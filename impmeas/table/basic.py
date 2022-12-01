@@ -1,4 +1,4 @@
-from formulas import Table, iter_assignments
+from ..formulas import Table, iter_assignments
 from math import comb
 
 def influence(f: Table, x: str) -> float:

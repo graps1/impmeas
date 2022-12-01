@@ -8,7 +8,8 @@ setup(
                 "impmeas",
                 "impmeas.bdds",
                 "impmeas.mc",
-                "impmeas.table"
+                "impmeas.table",
+                "impmeas.formulas"
             ],
             exclude=[
                 "tests",

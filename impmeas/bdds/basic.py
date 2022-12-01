@@ -1,4 +1,4 @@
-from formulas import BuddyNode
+from ..formulas import BuddyNode
 from functools import cache
 from math import comb
 

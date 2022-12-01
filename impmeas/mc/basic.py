@@ -1,4 +1,4 @@
-from formulas import Formula
+from ..formulas import Formula
 
 def influence(f: Formula, x: str, debug=False):
     if x not in f.vars: return 0

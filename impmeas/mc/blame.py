@@ -1,4 +1,4 @@
-from formulas import Formula
+from ..formulas import Formula
 from itertools import count
 from typing import Iterable, Union
 from .utils import at_most_cnf

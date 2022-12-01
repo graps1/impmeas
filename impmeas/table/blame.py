@@ -1,5 +1,5 @@
+from ..formulas import Table
 from functools import cache 
-from formulas import Table
         
 
 def blame(f: Table, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, debug=False):

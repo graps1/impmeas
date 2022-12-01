@@ -1,4 +1,4 @@
-from formulas import Formula, FormulaContext
+from ..formulas import Formula, FormulaContext
 
 def at_most(ctx: FormulaContext, k: int, X: set, new_var_prefix="__z_") -> tuple[Formula, set[str]]:
     assert k < len(X)

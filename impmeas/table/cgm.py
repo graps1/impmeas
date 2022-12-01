@@ -1,5 +1,4 @@
-from typing import Iterable
-from formulas import Table, iter_assignments
+from ..formulas import Table, iter_assignments
 from functools import cache
 
 @cache

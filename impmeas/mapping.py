@@ -1,5 +1,5 @@
-from . import mc, bdds, table
-from formulas import Repr, FormulaContext, BuddyContext, TableContext
+from . import mc, bdds, table, formulas
+from .formulas import Repr, FormulaContext, BuddyContext, TableContext
 
 str2value = {
     "I": { 
