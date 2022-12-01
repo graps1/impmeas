@@ -1,23 +1,8 @@
-import sys; sys.path.append("..")
+import impmeas as imp
 from typing import Set, Tuple
-
-import binvec
-import binfunc
 
 from random import randint, shuffle, choices
 from bidict import bidict
-
-def random_vector(F : Set[str]) -> binvec.vec:
-    '''
-        generates a random binvec.binvec instance with variables in F
-    '''
-    return binvec.vec({ x: randint(0,1) for x in F })
-
-def random_subset(F: Set[str]) -> Set[str]:
-    '''
-        returns a random subset of F
-    '''
-    return set(list(F)[:randint(0, len(F))])
 
 def random_equivalent(F : Set[str], var_pref = "y") -> Tuple[bidict[str,str], Set[str]]:
     '''
