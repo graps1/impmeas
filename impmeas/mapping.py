@@ -19,7 +19,7 @@ str2value = {
     },
     "Sh/CCGM": {
         # "#SAT": mc.shapley,
-        # BuddyContext: bdds.shapley,
+        BuddyContext: bdds.shapley,
         TableContext: table.shapley
     },
     "Bz/DCGM": {
