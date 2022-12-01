@@ -8,7 +8,7 @@ setup(
                 "impmeas",
                 "impmeas.bdds",
                 "impmeas.mc",
-                "impmeas.table",
+                "impmeas.fallback",
                 "impmeas.formulas"
             ],
             exclude=[

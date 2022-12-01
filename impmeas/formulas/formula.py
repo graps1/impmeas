@@ -125,11 +125,14 @@ class Formula(Repr):
             for c in self.children: ret |= c.vars
             return ret
 
-    def satcount(self, exists=set()):
+    def expectation(self, exists=set()) -> float:
         simp = self.simplify()
+        if not PMC_SOLVER: 
+            print("PMC_SOLVER not instantiated. iterating over all assignments.")
+            return super(Formula, simp).expectation()
         var_diff_count = len(self.vars) - len(simp.vars)
         if simp == Formula.false: return 0
-        if simp == Formula.true: return 2**var_diff_count # trivial cases
+        if simp == Formula.true: return 1
 
         cnf, sub2idx = simp.tseitin() # create cnf encoding
 
@@ -140,8 +143,8 @@ class Formula(Repr):
         # existentially quantifies new tseitin variables + those that are explicitly specified
         # we have: tseitin vars ids = all_vars_ids - orig_vars_ids
         exists_ids = (all_vars_ids - orig_vars_ids) | exists_vars_ids
-        sc = SOLVER.satcount(cnf, exists=exists_ids)
-        return  sc * 2**var_diff_count
+        sc = PMC_SOLVER.satcount(cnf, exists=exists_ids)
+        return  sc / 2**len(simp.vars)
 
     # --- END ABSTRACT METHODS ---
 
@@ -296,5 +299,12 @@ class Formula(Repr):
     def var(cls, x: str) -> "Formula": 
         return cls("V", x)
 
-SOLVER: "GPMC" = None
 SIMP_RULES = [ (Formula.parse(l), Formula.parse(r)) for l,r in _SIMP_RULES ]
+PMC_SOLVER: "GPMC" = None
+
+def set_pmc_solver(solver: GPMC):
+    global PMC_SOLVER
+    PMC_SOLVER = solver
+
+def get_pmc_solver():
+    return PMC_SOLVER

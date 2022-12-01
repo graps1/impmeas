@@ -1,4 +1,4 @@
-from ..formulas import Formula, SOLVER
+from ..formulas import Formula, get_pmc_solver 
 from itertools import count
 from typing import Iterable, Union
 from .utils import at_most_cnf
@@ -29,7 +29,7 @@ def resp_counts(f: Formula, x: str, debug=False) -> Iterable[int]:
         if debug and k > 0: print()
         if debug: print(f"k={k}", end=" ")
         if debug: print(f"size of cnf: {len(new_cnf)}", end=" ")
-        yield k, SOLVER.satcount(cnf + cnf_leqk, exists=exists)
+        yield k, get_pmc_solver().satcount(cnf + cnf_leqk, exists=exists)
     
 def blame(f: Formula, x: str, rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=False):
     if x not in f.vars: return 0, 0

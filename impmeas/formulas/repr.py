@@ -29,9 +29,8 @@ class Repr(ABC):
     def vars(self) -> set[str]: 
         raise NotImplementedError()
 
-    @abstractmethod 
-    def satcount(self) -> int:
-        raise NotImplementedError()
+    def expectation(self) -> float:
+        return sum( self(u) for u in iter_assignments(self.vars) ) / 2**len(self.vars)
 
     def branch(self, *vars: list[str]) -> list["Repr"]:
         for ass in iter_assignments(vars):
@@ -44,25 +43,23 @@ class Repr(ABC):
     def __lshift__(self, other: "Repr") -> "Repr": return type(self).apply("<-", self, other)
     def __invert__(self): return type(self).apply("~", self)
     def biimp(self, other: "Repr") -> "Repr": return type(self).apply("<->", self, other)
+    def ite(self, o1: "Repr", o2: "Repr") -> "Repr": return self & o1 | ~self & o2
 
     @classmethod
     @abstractmethod
     def var(cls, x: str) -> "Repr": 
         raise NotImplementedError()
 
-    @property
     @classmethod
     @abstractmethod
     def false(cls) -> "Repr": 
         raise NotImplementedError()
 
-    @property
     @classmethod
     @abstractmethod
     def true(cls) -> "Repr": 
         raise NotImplementedError()
 
-    @property
     @classmethod
     @abstractmethod
     def apply(cls, op: str, *children) -> "Repr":

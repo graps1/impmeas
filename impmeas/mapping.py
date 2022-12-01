@@ -1,55 +1,36 @@
-from . import mc, bdds, table, formulas
-from .formulas import Repr, Table, Formula, BuddyNode
+from . import Repr, Formula, BuddyNode
+from . import mc, bdds, fallback
+from .formulas import get_pmc_solver
+from typing import Callable, Union
 
-str2value = {
-    "I": { 
-        Table: table.influence,
-        Formula: mc.influence,
-        BuddyNode: bdds.influence,
-    },
-    "Blame": {
-        Table: lambda f,x: table.blame(f,x,cutoff=0)[0],
-        Formula: lambda f,x: mc.blame(f,x,cutoff=0)[0],
-        BuddyNode: lambda f,x: bdds.blame(f,x,cutoff=0)[0],
-    },
-    "Bz/CCGM": {
-        Formula: mc.banzhaf,
-        BuddyNode: bdds.banzhaf,
-        Table: table.banzhaf
-    },
-    "Sh/CCGM": {
-        # "#SAT": mc.shapley,
-        BuddyNode: bdds.shapley,
-        Table: table.shapley
-    },
-    "Bz/DCGM": {
-        BuddyNode: lambda f,x: bdds.banzhaf(table.omega(f), x),
-        Table: lambda f,x: table.banzhaf(table.omega(f), x),
-    },
-    "Bz/RCGM": {
-        BuddyNode: lambda f,x: bdds.banzhaf(table.upsilon(f), x),
-        Table: lambda f,x: table.banzhaf(table.upsilon(f), x),
-    },
-    "Bz/QHCGM": {
-        Table: lambda f,x: table.bz_hcgm(f, x, rho=lambda z: 4*(z-0.5)**2)
-    }
-}
+def influence(f: Repr, x: str) -> float:
+    return fallback.influence(f, x)
 
-def methods(val: str):
-    assert val in str2value, f"importance value {val} not recognized. "+\
-        f"choose one of {', '.join(str2value.keys())}."
-    return str2value[val]
+def blame(f: Repr, x: str, rho=lambda x:1/(x+1), cutoff=1e-4,debug=False) -> float:
+    if get_pmc_solver() and type(f) ==Formula:
+        method = mc.blame
+    else: method = fallback.blame
+    return method(f,x,rho,cutoff,debug)[0]
 
-def value(val: str, f: Repr, x: str):
-    via2value = methods(val)
-    via = type(f)
+def banzhaf(f: Union[Repr,tuple[set[str], Callable[[dict[str, bool]],float]]], x: str) -> float:
+    return fallback.banzhaf(f,x)
 
-    assert via in via2value, f"method {via} not applicable for "+\
-        f"importance value {val}. choose one of "+\
-        f"{', '.join(map(str, via2value.keys()))}."
+def shapley(f: Union[Repr,tuple[set[str], Callable[[dict[str, bool]],float]]], x: str) -> float:
+    return fallback.shapley(f,x)
 
-    val = via2value[via]
-    return val(f, x)
+def dominating_cgm(f: Repr) -> Repr:
+    method = {
+        BuddyNode: bdds.omega,
+    }.get(type(f), fallback.omega)
+    return method(f)
 
+def rectifying_cgm(f: Repr) -> Repr:
+    method = {
+        BuddyNode: bdds.upsilon,
+    }.get(type(f), fallback.upsilon)
+    return method(f)
+
+def hkr_cgm(f: Repr, rho = lambda x: 4*(0.5-x)**2) -> tuple[set[str], Callable[[dict[str, bool]],float]]:
+    return f.vars, fallback.hkr(f,rho)
 
     

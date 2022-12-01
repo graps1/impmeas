@@ -1,6 +1,6 @@
 from .repr import Repr
 from .utils import cnf2dimacs, random_k_cnf, iter_assignments
-from .formula import Formula, SOLVER
+from .formula import Formula, set_pmc_solver, get_pmc_solver
 from .table import Table
-from .buddy import BUDDY_CONTEXT_INSTANCE, BuddyNode
+from .buddy import get_buddy_context, set_buddy_context, BuddyNode, BuddyContext
 from .gpmc import GPMC

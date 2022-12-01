@@ -9,11 +9,17 @@ from .repr import Repr
 
 
 BUDDY_CONTEXT_INSTANCE:"BuddyContext" = None
+def set_buddy_context(buddy_context: "BuddyContext"):
+	global BUDDY_CONTEXT_INSTANCE
+	BUDDY_CONTEXT_INSTANCE = buddy_context
+def get_buddy_context():
+	return BUDDY_CONTEXT_INSTANCE
 
 class BuddyNode(Repr):
 	def __init__(self, node_id : int):
 		super().__init__()
 		self.node_id = node_id
+		assert BUDDY_CONTEXT_INSTANCE is not None, "Buddy not instantiated"
 		BUDDY_CONTEXT_INSTANCE._bdd.bdd_addref(self.node_id)
 
 	# --- ABSTRACT METHODS ---
@@ -37,18 +43,18 @@ class BuddyNode(Repr):
 		if self == BUDDY_CONTEXT_INSTANCE.true: return True
 		elif self == BUDDY_CONTEXT_INSTANCE.false: return False
 		else:
-			sub = self.high if assignment[self.var] else self.low
+			sub = self.high if assignment[self.topvar] else self.low
 			return sub(assignment)
 
 	def __copy__(self): 
-		return BuddyNode(BUDDY_CONTEXT_INSTANCE, self.node_id)
+		return BuddyNode(self.node_id)
 
 	@property
 	def vars(self) -> set[str]: 
 		return set(v for v,c in self.var_profile.items() if c > 0)
 
-	def satcount(self) -> int: 
-		return BUDDY_CONTEXT_INSTANCE._bdd.bdd_satcount(self.node_id)
+	def expectation(self) -> float: 
+		return float(BUDDY_CONTEXT_INSTANCE._bdd.bdd_satcount(self.node_id)) / 2**BUDDY_CONTEXT_INSTANCE.varcount
 
 	# --- END ABSTRACT METHODS ---
 
@@ -63,17 +69,17 @@ class BuddyNode(Repr):
 		return isinstance(other, BuddyNode) and self.node_id == other.node_id
 
 	@property
-	def var(self) -> str:
+	def topvar(self) -> str:
 		if self.node_id in [0,1]: return None
 		return BUDDY_CONTEXT_INSTANCE.vars[BUDDY_CONTEXT_INSTANCE._bdd.bdd_var(self.node_id)]
 
 	@property
 	def low(self) -> "BuddyNode": 
-		return BuddyNode(BUDDY_CONTEXT_INSTANCE, BUDDY_CONTEXT_INSTANCE._bdd.bdd_low(self.node_id))
+		return BuddyNode(BUDDY_CONTEXT_INSTANCE._bdd.bdd_low(self.node_id))
 
 	@property
 	def high(self) -> "BuddyNode": 
-		return BuddyNode(BUDDY_CONTEXT_INSTANCE, BUDDY_CONTEXT_INSTANCE._bdd.bdd_high(self.node_id))
+		return BuddyNode(BUDDY_CONTEXT_INSTANCE._bdd.bdd_high(self.node_id))
 
 	@property
 	def nodecount(self) -> int:
@@ -111,13 +117,13 @@ class BuddyNode(Repr):
 	def var(cls, x: str) -> "BuddyNode": 
 		return BUDDY_CONTEXT_INSTANCE.var(x)
 
-	@property
 	@classmethod
+	@property
 	def false(cls) -> "BuddyNode": 
 		return BUDDY_CONTEXT_INSTANCE.false
 
-	@property
 	@classmethod
+	@property
 	def true(cls) -> "BuddyNode": 
 		return BUDDY_CONTEXT_INSTANCE.true	
 
@@ -241,4 +247,4 @@ class BuddyContext:
 		buddy._bdd.bdd_fnload(c_char_p(file_bdd.encode("UTF-8")), byref(root))
 		buddy._bdd.bdd_addref(root.value)
 		# print(f"loaded {file_bdd}")
-		return buddy, BuddyNode(buddy, root.value)
+		return buddy, BuddyNode(root.value)

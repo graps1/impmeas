@@ -46,8 +46,8 @@ class Table(Repr):
             table[ass] = self(ass | { x: not ass[x] })
         return table
 
-    def satcount(self):
-        return sum(self.table)
+    def expectation(self) -> float:
+        return sum(self.table) / 2**len(self.vars)
 
     # --- END ABSTRACT METHODS ---
 
@@ -81,8 +81,8 @@ class Table(Repr):
                 ret += " " + str(int(self(ass)))
             ret += "\n"
         elif PRINT_MODE == "primes":
-            if self.satcount() == 0: return "0"
-            elif self.satcount() == 2**len(self.vars): return "1"
+            if self.expectation() == 0: return "0"
+            elif self.expectation() == 1: return "1"
             primes = self.prime_implicants()
             ret = " | ".join("".join(k if v else k+"'" for k,v in p.items()) for p in primes)
         else:
@@ -104,7 +104,7 @@ class Table(Repr):
         return not (other == self)
 
     def prime_implicants(self) -> list[dict[str, int]]:
-        assert 0 < self.satcount() < 2**len(self.vars), "function is constant!"
+        assert 0 < self.expectation() < 1, "function is constant!"
 
         us = [ ass for ass in iter_assignments(self.vars) if self[ass] == 1 ] 
         while True:
@@ -133,13 +133,13 @@ class Table(Repr):
                 if new not in us: us.append(new)
         return us
         
-    @property
     @classmethod
+    @property
     def false(cls) -> "Table": 
         return cls([False], [])
 
-    @property
     @classmethod
+    @property
     def true(cls) -> "Table": 
         return cls([True], [])
 
