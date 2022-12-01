@@ -9,7 +9,7 @@ def blame(f: BuddyNode, x: str, rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=Fals
     @cache
     def g(f,c,k):
         if x not in f.vars:
-            return f.ctx.false
+            return BuddyNode.false
         elif k == 0:
             return (f ^ f.flip(x)) & (f.biimp(c))
         else:
@@ -22,9 +22,9 @@ def blame(f: BuddyNode, x: str, rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=Fals
     result = 0
     last_ell_sc = 0
     ub_max_increase = 1 
-    last_g_high, last_g_low = f.ctx.false, f.ctx.false
+    last_g_high, last_g_low = BuddyNode.false, BuddyNode.false
     stopping_reason = "finished iteration."
-    for k in range(f.ctx.varcount):
+    for k in range(BuddyNode.varcount):
         if debug and k > 0: print()
         if debug: print(f"k={k}", end=" ")
 
@@ -33,7 +33,7 @@ def blame(f: BuddyNode, x: str, rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=Fals
             stopping_reason = f"stopped because rho({k}) = 0"
             break
 
-        g_high, g_low = g(f, f.ctx.true, k), g(f, f.ctx.false, k)
+        g_high, g_low = g(f, BuddyNode.true, k), g(f, BuddyNode.false, k)
         if last_g_high == g_high and last_g_low == g_low:
             stopping_reason = f"stopped earlier because no change in g(f,0,k) and g(f,1,k) occurred."
             ub_max_increase = 0
@@ -47,10 +47,10 @@ def blame(f: BuddyNode, x: str, rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=Fals
         t_sc = new_ell_sc - last_ell_sc
         last_ell_sc = new_ell_sc
 
-        d_result = rho(k)*t_sc / 2**f.ctx.varcount
+        d_result = rho(k)*t_sc / 2**BuddyNode.varcount
         if debug: print(f"d result={d_result:.4f}", end=" ")
         result = result + d_result
-        ub_max_increase = rho(k+1)*(1 - new_ell_sc / 2**f.ctx.varcount)
+        ub_max_increase = rho(k+1)*(1 - new_ell_sc / 2**BuddyNode.varcount)
         if debug: print(f"max increase possible={ub_max_increase:.4f}", end=" ")
 
         if ub_max_increase <= cutoff:

@@ -1,6 +1,6 @@
-from ..formulas import Formula, FormulaContext
+from ..formulas import Formula
 
-def at_most(ctx: FormulaContext, k: int, X: set, new_var_prefix="__z_") -> tuple[Formula, set[str]]:
+def at_most(k: int, X: set, new_var_prefix="__z_") -> tuple[Formula, set[str]]:
     assert k < len(X)
 
     n = len(X)
@@ -9,14 +9,14 @@ def at_most(ctx: FormulaContext, k: int, X: set, new_var_prefix="__z_") -> tuple
     z = lambda i,j: f"{new_var_prefix}{Z[i+n*j]}"
     x = lambda i: X[i]
 
-    f = ctx.parse(f"{z(0,0)} <-> {x(0)}")
+    f = Formula.parse(f"{z(0,0)} <-> {x(0)}")
     for l in range(1, n):
-        f = f & ctx.parse(f"{z(0,l)} <-> {x(l)} | {z(0,l-1)}")
+        f = f & Formula.parse(f"{z(0,l)} <-> {x(l)} | {z(0,l-1)}")
     for i in range(1, k+1):
-        f = f & ctx.parse(f"{z(i,i)} <-> {x(i)} & {z(i-1,i-1)}")
+        f = f & Formula.parse(f"{z(i,i)} <-> {x(i)} & {z(i-1,i-1)}")
         for l in range(i+1, n):
-            f = f & ctx.parse(f"{z(i,l)} <-> {x(l)} & {z(i-1,l-1)} | {z(i,l-1)}")
-    f = f & ~ctx.parse(z(k,n-1))
+            f = f & Formula.parse(f"{z(i,l)} <-> {x(l)} & {z(i-1,l-1)} | {z(i,l-1)}")
+    f = f & ~Formula.parse(z(k,n-1))
     return f, set(z(i,j) for i in range(k+1) for j in range(i, n))
 
 

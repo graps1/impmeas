@@ -1,6 +1,6 @@
 from .gpmc import GPMC
-from .repr import Repr, ReprContext
-from .parser import OPERATIONS, PRECEDENCE
+from .repr import Repr
+from .formula_parser import OPERATIONS, PRECEDENCE
 from typing import Union
 import copy
 
@@ -59,8 +59,8 @@ _SIMP_RULES = [
 ]
 
 class Formula(Repr):
-    def __init__(self, ctx: "FormulaContext", op=None, *children):
-        super().__init__(ctx)
+    def __init__(self, op=None, *children):
+        super().__init__()
 
         assert op in ["C","V"] or op in OPERATIONS, op
 
@@ -101,20 +101,20 @@ class Formula(Repr):
                 return left(assignment) != right(assignment)
 
     def __copy__(self) -> "Formula":
-        return Formula(self.ctx, self.op, *(copy.copy(c) for c in self.children))
+        return Formula(self.op, *(copy.copy(c) for c in self.children))
 
     def cofactor(self, ass: dict[str, int]) -> "Formula":
         if self.op == "V" and self.c1 in ass: 
-            return self.ctx.true if ass[self.c1] else self.ctx.false
+            return Formula.true if ass[self.c1] else Formula.false
         elif self.op in ["V", "C"]: 
             return copy.copy(self)
         else: 
-            return Formula(self.ctx, self.op, *(c.cofactor(ass) for c in self.children))
+            return Formula(self.op, *(c.cofactor(ass) for c in self.children))
 
     def flip(self, var : str) -> "Formula":
-        if self.op == "V" and self.c1 == var: return Formula(self.ctx, "~", self)
+        if self.op == "V" and self.c1 == var: return Formula("~", self)
         elif self.op in ["V", "C"]: return copy.copy(self)
-        else: return Formula(self.ctx, self.op, *(c.flip(var) for c in self.children))
+        else: return Formula(self.op, *(c.flip(var) for c in self.children))
 
     @property     
     def vars(self) -> set[str]:
@@ -128,26 +128,25 @@ class Formula(Repr):
     def satcount(self, exists=set()):
         simp = self.simplify()
         var_diff_count = len(self.vars) - len(simp.vars)
-        if simp == simp.ctx.false: return 0
-        if simp == simp.ctx.true: return 2**var_diff_count # trivial cases
+        if simp == Formula.false: return 0
+        if simp == Formula.true: return 2**var_diff_count # trivial cases
 
         cnf, sub2idx = simp.tseitin() # create cnf encoding
 
         all_vars_ids = set(sub2idx.values())
-        orig_vars_ids = { sub2idx[self.ctx.var(x)] for x in simp.vars }
-        exists_vars_ids = { sub2idx[self.ctx.var(x)] for x in exists }
+        orig_vars_ids = { sub2idx[Formula.var(x)] for x in simp.vars }
+        exists_vars_ids = { sub2idx[Formula.var(x)] for x in exists }
 
         # existentially quantifies new tseitin variables + those that are explicitly specified
         # we have: tseitin vars ids = all_vars_ids - orig_vars_ids
         exists_ids = (all_vars_ids - orig_vars_ids) | exists_vars_ids
-        sc = self.ctx.solver.satcount(cnf, exists=exists_ids)
+        sc = SOLVER.satcount(cnf, exists=exists_ids)
         return  sc * 2**var_diff_count
 
     # --- END ABSTRACT METHODS ---
 
     def __eq__(self, other) -> bool: 
         return  isinstance(other, Formula) and \
-                self.ctx == other.ctx and \
                 self.op == other.op and \
                 all(c1 == c2 for c1,c2 in zip(self.children, other.children))
 
@@ -213,10 +212,10 @@ class Formula(Repr):
         if self.op in ["C", "V"]: 
             return self
         else:
-            self_simplified = Formula(self.ctx, self.op, *(c.simplify() for c in self.children))
+            self_simplified = Formula(self.op, *(c.simplify() for c in self.children))
             while True:
                 rule_applicable = False
-                for rule, result in self.ctx.SIMP_RULES:
+                for rule, result in SIMP_RULES:
                     if (replacement := self_simplified.is_applicable(rule)) is not None:
                         self_simplified = result.replace(replacement)                    
                         rule_applicable = True 
@@ -227,14 +226,14 @@ class Formula(Repr):
     def replace(self, d: dict[str, Union["Formula", str]]):
         if self.op == "V" and self.c1 in d: 
             repl = d[self.c1]
-            if isinstance(repl, str): repl = self.ctx.parse(repl)
+            if isinstance(repl, str): repl = Formula.parse(repl)
             return copy.copy(repl)
         elif self.op in ["V", "C"]: return copy.copy(self)
-        else: return Formula(self.ctx, self.op, *(c.replace(d) for c in self.children))
+        else: return Formula(self.op, *(c.replace(d) for c in self.children))
 
     def tseitin(self) -> tuple[list[set], dict["Formula", int]]:
         formula = self.simplify()
-        if formula == formula.ctx.false or formula == formula.ctx.true: 
+        if formula == Formula.false or formula == Formula.true: 
             return [], {}
 
         stack = [formula]
@@ -248,7 +247,7 @@ class Formula(Repr):
             if top.op != "V": # recurse if top is not a variable
                 children = top.children
                 if len(top.children) > 2:
-                    children = (top.children[0], Formula(self.ctx, top.op, *top.children[1:]) )
+                    children = (top.children[0], Formula(top.op, *top.children[1:]) )
                 subs.add((top, children))
                 stack += list(children)
         sub2idx = {k: v for v,k in enumerate(sub2idx, start=1)}
@@ -279,25 +278,23 @@ class Formula(Repr):
         return cnf, sub2idx
 
 
-class FormulaContext(ReprContext):
-    def __init__(self, solver: GPMC = None):
-        self.SIMP_RULES = [ (self.parse(l), self.parse(r)) for l,r in _SIMP_RULES ]
-        self.__solver = solver
-
-    @property 
-    def solver(self) -> GPMC:
-        return self.__solver
-
+    @classmethod
     @property
-    def false(self) -> "Repr": 
-        return Formula(self, "C", "0")
+    def false(cls) -> "Formula": 
+        return cls("C", "0")
 
+    @classmethod
     @property
-    def true(self) -> "Repr": 
-        return Formula(self, "C", "1")
+    def true(cls) -> "Formula": 
+        return cls("C", "1")
 
-    def apply(self, op: str, *children) -> "Formula":
-        return Formula(self, op, *children)
+    @classmethod
+    def apply(cls, op: str, *children) -> "Formula":
+        return cls(op, *children)
 
-    def var(self, x: str) -> "Repr": 
-        return Formula(self, "V", x)
+    @classmethod
+    def var(cls, x: str) -> "Formula": 
+        return cls("V", x)
+
+SOLVER: "GPMC" = None
+SIMP_RULES = [ (Formula.parse(l), Formula.parse(r)) for l,r in _SIMP_RULES ]

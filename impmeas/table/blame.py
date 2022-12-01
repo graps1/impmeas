@@ -10,7 +10,7 @@ def blame(f: Table, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, debug=False):
     @cache
     def g(f,c,k):
         if x not in f.vars:
-            return f.ctx.false
+            return Table.false
         elif k == 0:
             return f & ~f.flip(x) if c == 1 else ~f & f.flip(x)
         else:
@@ -23,7 +23,7 @@ def blame(f: Table, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, debug=False):
     result = 0
     last_ell_sc = 0
     ub_max_increase = 1 
-    last_g_high, last_g_low = f.ctx.false, f.ctx.false
+    last_g_high, last_g_low = Table.false, Table.false
     stopping_reason = "finished iteration."
     for k in range(len(f.vars)):
         if debug and k > 0: print()

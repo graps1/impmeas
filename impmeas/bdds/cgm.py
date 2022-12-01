@@ -9,7 +9,7 @@ def omega(f: BuddyNode):
         low, high = f.low, f.high
         low_tf = omega(low & high)
         high_tf = omega(low) | omega(high)
-        return f.ctx.var(f.var).ite(high_tf, low_tf)
+        return BuddyNode.var(f.var).ite(high_tf, low_tf)
 
 @cache
 def upsilon(f: BuddyNode):
@@ -19,5 +19,5 @@ def upsilon(f: BuddyNode):
         low, high = f.low, f.high
         low_tf = upsilon(low) & upsilon(high)
         high_tf = upsilon(low | high)
-        xf = f.ctx.var(f.var)
+        xf = BuddyNode.var(f.var)
         return xf.ite(high_tf, low_tf)

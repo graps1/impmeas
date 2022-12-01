@@ -10,7 +10,7 @@ def omega(f: Table) -> Table:
         low, high = f.branch(x)
         low_tf = omega(low & high)
         high_tf = omega(low) | omega(high)
-        xf = f.ctx.var(x)
+        xf = Table.var(x)
         return xf & high_tf | ~xf & low_tf
 
 @cache 
@@ -26,7 +26,7 @@ def upsilon(f: Table) -> Table:
         low, high = f.branch(x)
         low_tf = upsilon(low) & upsilon(high)
         high_tf = upsilon(low | high)
-        xf = f.ctx.var(x)
+        xf = Table.var(x)
         return xf & high_tf | ~xf & low_tf
 
 def hcgm(f: Table, S: set[str], rho = lambda x: 4*(0.5-x)**2) -> float:

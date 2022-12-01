@@ -1,11 +1,13 @@
 from typing import Iterable
-from .repr import Repr, ReprContext
+from .repr import Repr
 from .utils import iter_assignments
 import copy
 
+PRINT_MODE = "primes"
+
 class Table(Repr):
-    def __init__(self, context: "TableContext", table: list[int], vars: list[str]):
-        super().__init__(context)
+    def __init__(self, table: list[int], vars: list[str]):
+        super().__init__()
         self.__table = table
         self.__vars = vars
         assert 2**len(self.vars) == len(self.table)
@@ -27,12 +29,12 @@ class Table(Repr):
         return tuple(self.table).__hash__() + tuple(self.vars).__hash__()
 
     def __copy__(self): 
-        return Table(self.ctx, self.table.copy(), self.vars.copy())
+        return Table(self.table.copy(), self.vars.copy())
 
     def cofactor(self, ass: dict[str, bool]) -> "Table": 
         new_vars = self.vars.copy()
         for x in ass: new_vars.remove(x)
-        table = Table(self.ctx, [0 for _ in range(2**len(new_vars))], new_vars)
+        table = Table.zeros(new_vars)
         for u in iter_assignments(new_vars):
             idx = table.assignment2idx(u)
             table.table[idx] = self(u | ass)
@@ -72,22 +74,23 @@ class Table(Repr):
         return table_index
 
     def __repr__(self):
-        if self.ctx.print_mode == "table":
+        if PRINT_MODE == "table":
             ret = " ".join(self.vars) + " f" + "\n" + "-"*(len(self.vars)*2+1) 
             for ass in iter_assignments(self.vars):
                 ret += "\n" + " ".join({True: "1", False: "0"}[ass[x]] for x in self.vars)
                 ret += " " + str(int(self(ass)))
             ret += "\n"
-        else:
+        elif PRINT_MODE == "primes":
             if self.satcount() == 0: return "0"
             elif self.satcount() == 2**len(self.vars): return "1"
             primes = self.prime_implicants()
             ret = " | ".join("".join(k if v else k+"'" for k,v in p.items()) for p in primes)
+        else:
+            raise Exception(f"PRINT_MODE must either be 'primes' or 'table' but is {PRINT_MODE}.")
         return ret
 
     def __le__(self, other):
         return isinstance(other, Table) and \
-               other.ctx == self.ctx and \
                set(other.vars) == set(self.vars) and \
                all(self[ass] <= other[ass] for ass in iter_assignments(self.vars))
 
@@ -129,27 +132,25 @@ class Table(Repr):
                 del new[targetvar]
                 if new not in us: us.append(new)
         return us
-
-class TableContext(ReprContext):
-    def __init__(self, print_mode="table"):
-        assert print_mode in ["table", "primes"], print_mode
-        self.__print_mode = print_mode
-
-    @property 
-    def print_mode(self):
-        return self.__print_mode
+        
+    @property
+    @classmethod
+    def false(cls) -> "Table": 
+        return cls([False], [])
 
     @property
-    def false(self) -> "Table": 
-        return Table(self, [False], [])
+    @classmethod
+    def true(cls) -> "Table": 
+        return cls([True], [])
 
-    @property
-    def true(self) -> "Table": 
-        return Table(self, [True], [])
+    @classmethod
+    def zeros(cls, vars: list[str]) -> "Table":
+        return cls([0 for _ in range(2**len(vars))], vars)
 
-    def apply(self, op: str, *children) -> "Table":
+    @classmethod
+    def apply(cls, op: str, *children) -> "Table":
         all_vars = list( set().union( *(set(c.vars) for c in children)) ) 
-        new_table = Table(self, [0 for _ in range(2**len(all_vars))], all_vars)
+        new_table = cls.zeros(all_vars)
         for ass in iter_assignments(all_vars):
             val = None
             if op == "~": val = not children[0](ass)
@@ -162,8 +163,6 @@ class TableContext(ReprContext):
             new_table[ass] = val
         return new_table
 
-    def var(self, x: str) -> "Table":
-        return Table(self, [False, True], [x])
-
-    def empty(self, vars: list[str]) -> "Table":
-        return Table(self, [0 for _ in range(2**len(vars))], vars)
+    @classmethod
+    def var(cls, x: str) -> "Table":
+        return cls([False, True], [x])

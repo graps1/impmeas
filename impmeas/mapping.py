@@ -1,37 +1,37 @@
 from . import mc, bdds, table, formulas
-from .formulas import Repr, FormulaContext, BuddyContext, TableContext
+from .formulas import Repr, Table, Formula, BuddyNode
 
 str2value = {
     "I": { 
-        TableContext: table.influence,
-        FormulaContext: mc.influence,
-        BuddyContext: bdds.influence,
+        Table: table.influence,
+        Formula: mc.influence,
+        BuddyNode: bdds.influence,
     },
     "Blame": {
-        TableContext: lambda f,x: table.blame(f,x,cutoff=0)[0],
-        FormulaContext: lambda f,x: mc.blame(f,x,cutoff=0)[0],
-        BuddyContext: lambda f,x: bdds.blame(f,x,cutoff=0)[0],
+        Table: lambda f,x: table.blame(f,x,cutoff=0)[0],
+        Formula: lambda f,x: mc.blame(f,x,cutoff=0)[0],
+        BuddyNode: lambda f,x: bdds.blame(f,x,cutoff=0)[0],
     },
     "Bz/CCGM": {
-        FormulaContext: mc.banzhaf,
-        BuddyContext: bdds.banzhaf,
-        TableContext: table.banzhaf
+        Formula: mc.banzhaf,
+        BuddyNode: bdds.banzhaf,
+        Table: table.banzhaf
     },
     "Sh/CCGM": {
         # "#SAT": mc.shapley,
-        BuddyContext: bdds.shapley,
-        TableContext: table.shapley
+        BuddyNode: bdds.shapley,
+        Table: table.shapley
     },
     "Bz/DCGM": {
-        BuddyContext: lambda f,x: bdds.banzhaf(table.omega(f), x),
-        TableContext: lambda f,x: table.banzhaf(table.omega(f), x),
+        BuddyNode: lambda f,x: bdds.banzhaf(table.omega(f), x),
+        Table: lambda f,x: table.banzhaf(table.omega(f), x),
     },
     "Bz/RCGM": {
-        BuddyContext: lambda f,x: bdds.banzhaf(table.upsilon(f), x),
-        TableContext: lambda f,x: table.banzhaf(table.upsilon(f), x),
+        BuddyNode: lambda f,x: bdds.banzhaf(table.upsilon(f), x),
+        Table: lambda f,x: table.banzhaf(table.upsilon(f), x),
     },
     "Bz/QHCGM": {
-        TableContext: lambda f,x: table.bz_hcgm(f, x, rho=lambda z: 4*(z-0.5)**2)
+        Table: lambda f,x: table.bz_hcgm(f, x, rho=lambda z: 4*(z-0.5)**2)
     }
 }
 
@@ -42,7 +42,7 @@ def methods(val: str):
 
 def value(val: str, f: Repr, x: str):
     via2value = methods(val)
-    via = type(f.ctx)
+    via = type(f)
 
     assert via in via2value, f"method {via} not applicable for "+\
         f"importance value {val}. choose one of "+\
@@ -50,7 +50,6 @@ def value(val: str, f: Repr, x: str):
 
     val = via2value[via]
     return val(f, x)
-
 
 
     

@@ -1,22 +1,19 @@
-from ..formulas import Formula
+from ..formulas import Formula, SOLVER
 from itertools import count
 from typing import Iterable, Union
 from .utils import at_most_cnf
 
 def resp_counts(f: Formula, x: str, debug=False) -> Iterable[int]:
-    assert f.ctx.solver is not None
-    solver = f.ctx.solver
-
     new_flip_vars = { f"__z_{y}": y for y in f.vars-{x} }
-    replacements = { new_flip_vars[z]: f.ctx.parse(f"{z} ^ {new_flip_vars[z]}") \
+    replacements = { new_flip_vars[z]: Formula.parse(f"{z} ^ {new_flip_vars[z]}") \
                      for z in new_flip_vars }
     f_flip_vars = f.replace(replacements)
     f_flip_vars_x = f_flip_vars.flip(x)
     inner = (f & f_flip_vars & ~f_flip_vars_x) | (~f & ~f_flip_vars & f_flip_vars_x)
 
     cnf, sub2idx = inner.tseitin()
-    new_flip_var_ids = { sub2idx[f.ctx.var(p)] for p in new_flip_vars } # to index
-    orig_var_ids = { sub2idx[f.ctx.var(p)] for p in f.vars }
+    new_flip_var_ids = { sub2idx[Formula.var(p)] for p in new_flip_vars } # to index
+    orig_var_ids = { sub2idx[Formula.var(p)] for p in f.vars }
     all_var_ids = set(sub2idx.values())
 
     # new_card_vars: set[int]
@@ -32,7 +29,7 @@ def resp_counts(f: Formula, x: str, debug=False) -> Iterable[int]:
         if debug and k > 0: print()
         if debug: print(f"k={k}", end=" ")
         if debug: print(f"size of cnf: {len(new_cnf)}", end=" ")
-        yield k, solver.satcount(cnf + cnf_leqk, exists=exists)
+        yield k, SOLVER.satcount(cnf + cnf_leqk, exists=exists)
     
 def blame(f: Formula, x: str, rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=False):
     if x not in f.vars: return 0, 0
