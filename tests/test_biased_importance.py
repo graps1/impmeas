@@ -1,4 +1,5 @@
 import impmeas as imp
+from utils import X,Y
 
 TOLERANCE = 1e-10
 
@@ -18,9 +19,7 @@ def test_decomposition():
         hash: hhjfq9K1Fd 
     '''
     for _ in range(100):
-        X = [f"x{i}" for i in range(3)]
-        Y = [f"y{i}" for i in range(3)]
-        f,g,f1,f0 = imp.random_module(X,Y,monotone=True)
+        f,g,f1,f0 = imp.random_module(X[:3],Y[:3],monotone=True)
         f_template = imp.Table.var("z").ite(f1,f0)
         for v in vs:
             left = imp.banzhaf(v(f), "x0")
@@ -62,13 +61,12 @@ def test_SUD():
             - x in dep(g)
     '''
     for _ in range(50):
-        X = [f"x{i}" for i in range(3)]
-        Y = [f"y{i}" for i in range(3)]
-        g = imp.random_table(X) 
-        f0 = imp.random_table(Y) 
-        h0 = imp.random_table(Y) | f0  # h0 >= f0
-        h1 = imp.random_table(Y) | h0  # h1 >= h0 <= f1
-        f1 = imp.random_table(Y) | h1  # f1 >= h1
+        Xss, Yss = X[:3], Y[:3]
+        g = imp.random_table(Xss) 
+        f0 = imp.random_table(Yss) 
+        h0 = imp.random_table(Yss) | f0  # h0 >= f0
+        h1 = imp.random_table(Yss) | h0  # h1 >= h0 <= f1
+        f1 = imp.random_table(Yss) | h1  # f1 >= h1
         h = g.ite(h1,h0)
         f = g.ite(f1,f0)
         for v in vs:
