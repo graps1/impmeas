@@ -57,7 +57,7 @@ class BuddyNode(PseudoBoolFunc):
 
 	def flip(self, S:Union[str,set[str]]) -> "BuddyNode":
 		if isinstance(S,str): S = {S}
-		if self.topvar is None:
+		if self.topvar is None or len({ v for v,c in self.var_profile.items() if c > 0 } & S) == 0:
 			return self
 		else:
 			f0, f1 = self.branch(self.topvar)
@@ -90,7 +90,10 @@ class BuddyNode(PseudoBoolFunc):
 		return float(BUDDY_CONTEXT_INSTANCE._bdd.bdd_satcount(self.node_id)) / 2**BUDDY_CONTEXT_INSTANCE.varcount
 
 	def __le__(self, other):
-		return (self >> other) == BuddyNode.true
+		raise NotImplementedError()
+
+	def __ge__(self, other):
+		raise NotImplementedError()
 
 	def __eq__(self, other : "BuddyNode"): 
 		return isinstance(other, BuddyNode) and self.node_id == other.node_id
