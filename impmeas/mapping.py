@@ -30,7 +30,7 @@ def rectifying_cgm(f: Repr) -> Repr:
     }.get(type(f), fallback.upsilon)
     return method(f)
 
-def hkr_cgm(f: Repr, rho = lambda x: 4*(0.5-x)**2) -> tuple[set[str], Callable[[dict[str, bool]],float]]:
-    return f.vars, fallback.hkr(f,rho)
+def hkr_cgm(f: Repr, kappa = lambda x: 4*(0.5-x)**2) -> tuple[set[str], Callable[[dict[str, bool]],float]]:
+    return f.vars, fallback.hkr(f,kappa)
 
     

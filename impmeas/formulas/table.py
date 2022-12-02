@@ -42,7 +42,9 @@ class Table(Repr):
 
     def cofactor(self, ass: dict[str, bool]) -> "Table": 
         new_vars = self.vars.copy()
-        for x in ass: new_vars.remove(x)
+        for x in ass: 
+            if x in new_vars: 
+                new_vars.remove(x)
         table = Table.zeros(new_vars)
         for u in iter_assignments(new_vars):
             idx = table.assignment2idx(u)

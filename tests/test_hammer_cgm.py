@@ -1,17 +1,13 @@
-import sys; sys.path.append("..")
-
-import binvec
-import binfunc
-import cgm
-from utils import random_equivalent, random_subset, c, C, generate_module
+import impmeas as imp
+from utils import X,Y
 from math import log2
 
 TOLERANCE = 1e-10
 
-quadratic_rho = lambda x: 4*(x-0.5)**2 
+kappa_quad = lambda x: 4*(x-0.5)**2 
 
-rhos = [
-    quadratic_rho,
+kappas = [
+    kappa_quad,
     lambda x: 1 if x in [0,1] else 1+x*log2(x)+(1-x)*log2(1-x),
     lambda x: 2*abs(x-0.5)
 ]
@@ -20,60 +16,66 @@ def test_type_invariance():
     '''
         checks whether 
             
-            E_{h,rho}(T) = E_{g,rho}(pi(T))
+            E_h^kappa(T) = E_h^kappa(pi(T))
 
-        holds, given that g is the (pi,S)-equivalent of h
+        holds, given that h = pi(h ^ S)
 
         hash: o2hc3O6a4Q 
     '''
     for _ in range(100):
-        h = binfunc.randfunc(bits=6, var_prefix="x")
-        pi, S = random_equivalent(h.vars, var_pref="y")
-        g = h.flip(S).rename(pi)
-        T = random_subset(h.vars)
-        piT = { pi[x] for x in T }
-        for rho in rhos:
-            assert abs(cgm.hammer(T, h, rho=rho) - cgm.hammer(piT, g, rho=rho)) <= TOLERANCE
+        Xss,Yss = X[:4],Y[:4]
+        f = imp.random_table(Xss)
+        pi = { x:y for x,y in zip(Xss,Yss)}
+        S = imp.random_subset(Xss)
+        h = f.flip(S).replace(pi)
+        T = imp.random_assignment(Xss)
+        piT = { pi[x]: T[x] for x in T }
+        for kappa in kappas:
+            _, hkr_f = imp.hkr_cgm(f, kappa=kappa)
+            _, hkr_h = imp.hkr_cgm(h, kappa=kappa)
+            assert abs(hkr_f(T) - hkr_h(piT)) <= TOLERANCE
 
 
 def test_compl_invariance():
     '''
         checks whether
 
-            E_{f,rho}(S) = E_{~f,rho}(S)
+            E_{f}^kappa(S) = E_{~f}^kappa(S)
 
         holds.
 
         hash: LRa5B1wrsE
     '''
     for _ in range(100):
-        f = binfunc.randfunc(bits=6, var_prefix="x")
-        S = random_subset(f.vars)
+        f = imp.random_table(X[:6])
+        S = imp.random_assignment(f.vars)
         nf = ~f
-        for rho in rhos:
-            assert abs(cgm.hammer(S, f, rho=rho) - cgm.hammer(S, nf, rho=rho)) <= TOLERANCE
+        for kappa in kappas:
+            _, hkr_f = imp.hkr_cgm(f, kappa=kappa)
+            _, hkr_nf = imp.hkr_cgm(nf, kappa=kappa)
+            assert abs(hkr_f(S) - hkr_nf(S)) <= TOLERANCE
 
 
 
 def test_decomposition():
     '''
         suppose f is modular in h with cofactors s (positive) and t (negative)
-        checks whether the mapping rho : x -> 4*(x-0.5)**2 w/ E_{f,rho} = E_f fulfills
+        checks whether the mapping rho : x -> 4*(x-0.5)**2 w/ E_{f}^kappa = E_f fulfills
 
-            E_f(B|A|{x}) - E_f(B|A) = c(B,s,t)*(E_h(A|{x}) - E_A(B))
-            
-            with c(B,s,t) = (1/2**|B|)(sum_{beta in B(B)} ( lambda(s_beta) - lambda(t_beta) )**2
-
-        for B subset F-H, A subset H.
+            Dx E_f = (Dx E_g) * (Dg E_f)
 
         hash: cbcn0O7JCU
     '''
-    for _ in range(100):
-        f,h,s,t = generate_module(4,3)
-        A = random_subset(h.vars)
-        B = random_subset(f.vars - h.vars)
-        
-        diff1 = cgm.d(cgm.hammer, A|B, "x0", f)
-        diff2 = c(B,s,t)*cgm.d(cgm.hammer, A, "x0", h)
+    for _ in range(10):
+        f,g,s,t = imp.random_module(X[:3], Y[:3])
+        f_template = imp.Table.var("z").ite(s,t)
 
-        assert abs( diff1 - diff2 ) <= TOLERANCE 
+        _, E_f = imp.hkr_cgm(f, kappa=kappa_quad) 
+        _, E_g = imp.hkr_cgm(g, kappa=kappa_quad)
+        _, E_f_template = imp.hkr_cgm(f_template, kappa=kappa_quad)
+
+        for S in imp.iter_assignments(set(f.vars) | {"z"}):
+            Dx_E_f = E_f(S | {"x0":True}) - E_f(S | {"x0":False})
+            Dg_E_f = E_f_template(S | {"z":True}) - E_f_template(S | {"z":False})
+            Dx_E_g = E_g(S | {"x0":True}) - E_g(S | {"x0":False})
+            assert abs( Dx_E_f - Dx_E_g*Dg_E_f) <= TOLERANCE 
