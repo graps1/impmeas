@@ -1,8 +1,9 @@
-from ..formulas import Repr, iter_assignments
+from ..formulas import PseudoBoolFunc, iter_assignments
 from functools import cache 
 from itertools import combinations
 
-def scs(f: Repr, x: str, u: dict[str,bool], c=None) -> float:
+def scs(f: PseudoBoolFunc, x: str, u: dict[str,bool], c=None) -> float:
+    assert f.is_boolean
     assert x in f.vars
     if c is None: c = f[u]
     for level in range(len(f.vars)):
@@ -13,7 +14,8 @@ def scs(f: Repr, x: str, u: dict[str,bool], c=None) -> float:
                 return level
     return float("inf")
 
-def d(f: Repr, u: dict[str,bool]) -> float:
+def d(f: PseudoBoolFunc, u: dict[str,bool]) -> float:
+    assert f.is_boolean
     for level in range(len(f.vars)+1):
         for S in combinations(set(f.vars), level):
             u_xor_S = u | { y: not u[y] for y in S }
@@ -21,7 +23,8 @@ def d(f: Repr, u: dict[str,bool]) -> float:
                 return level
     return float("inf")
         
-def blame(f: Repr, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, debug=False):
+def blame(f: PseudoBoolFunc, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, debug=False):
+    assert f.is_boolean
     if x not in f.vars: return 0, 0
     if debug: print(f"=== COMPUTING BLAME for {x} in {f} ===")
 

@@ -1,36 +1,120 @@
 from abc import ABC, abstractmethod
 from . import formula_parser
 from .utils import iter_assignments
-from typing import Union
+from typing import Union, Iterable
 
-class Repr(ABC):
+class PseudoBoolFunc:
+    MUST_ALWAYS_BE_BOOLEAN = False
+
+    @abstractmethod
+    def __getitem__(self, key):
+        raise NotImplementedError()
 
     @abstractmethod
     def __hash__(self): 
         raise NotImplementedError()
 
     @abstractmethod
-    def __call__(self, assignment: dict[str, bool]) -> bool: 
-        raise NotImplementedError()
-
-    @abstractmethod
     def __copy__(self): 
         raise NotImplementedError()
 
+    @property
     @abstractmethod
-    def cofactor(self, ass: dict[str, bool]) -> "Repr": 
-        raise NotImplementedError()
-
-    @abstractmethod
-    def flip(self, S: Union[str, set[str]]) -> "Repr": 
+    def is_boolean(self):
         raise NotImplementedError()
 
     @property
-    @abstractmethod 
-    def vars(self) -> set[str]: 
+    @abstractmethod
+    def vars(self) -> Iterable[str]: 
         raise NotImplementedError()
 
-    def forall(self, S:set[str]) -> "Repr":
+    @abstractmethod
+    def cofactor(self, ass: dict[str, bool]) -> "PseudoBoolFunc": 
+        raise NotImplementedError()
+
+    @abstractmethod
+    def flip(self, S: Union[str, set[str]]) -> "PseudoBoolFunc": 
+        raise NotImplementedError()
+
+    @classmethod
+    @property
+    @abstractmethod 
+    def false(cls) -> "PseudoBoolFunc": 
+        raise NotImplementedError()
+
+    @classmethod
+    @property
+    @abstractmethod 
+    def true(cls) -> "PseudoBoolFunc": 
+        raise NotImplementedError()
+
+    @classmethod
+    @abstractmethod 
+    def _apply(cls, op: str, *children) -> "PseudoBoolFunc":
+        raise NotImplementedError()
+
+    @classmethod
+    @abstractmethod
+    def var(cls, x: str) -> "PseudoBoolFunc":
+        raise NotImplementedError()
+
+    ## END ABSTRACT METHODS
+    ## THE FOLLOWING MAY BE OVERWRITTEN
+
+    def expectation(self) -> float:
+        return sum( self[u] for u in iter_assignments(self.vars) ) / 2**len(self.vars)
+
+    def __le__(self, other):
+        if isinstance(other,float) or isinstance(other,int):
+            return all(self[ass] <= other for ass in iter_assignments(self.vars))
+        elif isinstance(other, PseudoBoolFunc):
+            return all(self[ass] <= other[ass] for ass in iter_assignments(set(self.vars)|set(other.vars)))
+        else:
+            return False
+
+    ## THE REMAINDER IS GOOD
+
+    def __ge__(self, other): return other.__le__(self)
+    def __eq__(self, other): return other <= self and self <= other
+    def __ne__(self, other): return not (other == self)
+
+    def prime_implicants(self) -> list[dict[str, int]]:
+        assert self.is_boolean
+        assert 0 < self.expectation() < 1, "function is constant!"
+
+        us = [ ass for ass in iter_assignments(self.vars) if self[ass] == 1 ] 
+        while True:
+            # select resolvents
+            marked = []
+            for u1 in us:
+                for u2 in us:
+                    # check if they can be resolved, i.e. if there exists EXACTLY one variable 
+                    # that occurs negatively in u1 and positively in u2 (or vice versa)
+                    # and all other variables have the same value
+                    if set(u1.keys()) != set(u2.keys()): continue 
+                    difference = [ var for var in u1 if u1[var] != u2[var] ]
+                    if len(difference) == 1:
+                        # mark for resolution
+                        marked.append((u1, u2, difference[0]))
+
+            # if resolvents exists.... resolve. otherwise, stop.
+            if len(marked) == 0:
+                break
+
+            for (res1, res2, targetvar) in marked:
+                if res1 in us: us.remove(res1)
+                if res2 in us: us.remove(res2)
+                new = res1.copy()
+                del new[targetvar]
+                if new not in us: us.append(new)
+        return us
+
+    def branch(self, *vars: list[str]) -> list["PseudoBoolFunc"]:
+        for ass in iter_assignments(vars):
+            yield self.cofactor(ass)
+
+    def forall(self, S:set[str]) -> "PseudoBoolFunc":
+        assert self.is_boolean
         if len(S) == 0:
             return self
         else:
@@ -38,55 +122,44 @@ class Repr(ABC):
             f0,f1 = self.branch(top)
             return (f0 & f1).forall(S-{top})
 
-    def exists(self, S:set[str]) -> "Repr":
+    def exists(self, S:set[str]) -> "PseudoBoolFunc":
+        assert self.is_boolean
         return ~(~self).forall(S)
 
-    def derivative(self, x:str) -> "Repr":
+    def derivative(self, x:str)->"PseudoBoolFunc":
+        assert not type(self).MUST_ALWAYS_BE_BOOLEAN
+        f0,f1 = self.branch(x)
+        return f1-f0
+
+    def boolean_derivative(self, x:str) -> "PseudoBoolFunc":
+        assert self.is_boolean
         f0,f1 = self.branch(x)
         return f1^f0
 
-    def expectation(self) -> float:
-        return sum( self(u) for u in iter_assignments(self.vars) ) / 2**len(self.vars)
+    ## PSEUDO BOOLEAN OPERATIONS
+    def __add__(self, other: "PseudoBoolFunc") -> "PseudoBoolFunc": return type(self)._apply("+", self, other)
+    def __neg__(self) -> "PseudoBoolFunc": return type(self)._apply("-", self)
+    def __sub__(self, other: "PseudoBoolFunc") -> "PseudoBoolFunc": return self + (-other)
+    def __pow__(self, other: "PseudoBoolFunc") -> "PseudoBoolFunc": return type(self)._apply("**", self, other)
+    def __mul__(self, other: "PseudoBoolFunc") -> "PseudoBoolFunc": return type(self)._apply("*", self, other)
+    def __abs__(self) -> "PseudoBoolFunc": return type(self)._apply("abs", self)
 
-    def branch(self, *vars: list[str]) -> list["Repr"]:
-        for ass in iter_assignments(vars):
-            yield self.cofactor(ass)
-
-    def __or__(self, other: "Repr") -> "Repr": return type(self).apply("|", self, other)
-    def __and__(self, other: "Repr") -> "Repr": return type(self).apply("&", self, other)
-    def __xor__(self, other: "Repr") -> "Repr": return type(self).apply("^", self, other)
-    def __rshift__(self, other: "Repr") -> "Repr": return type(self).apply("->", self, other)
-    def __lshift__(self, other: "Repr") -> "Repr": return type(self).apply("<-", self, other)
-    def __invert__(self): return type(self).apply("~", self)
-    def biimp(self, other: "Repr") -> "Repr": return type(self).apply("<->", self, other)
-    def ite(self, o1: "Repr", o2: "Repr") -> "Repr": return self & o1 | ~self & o2
-
-    @classmethod
-    @abstractmethod
-    def var(cls, x: str) -> "Repr": 
-        raise NotImplementedError()
+    ## BOOLEAN OPERATIONS
+    def __or__(self, other: "PseudoBoolFunc") -> "PseudoBoolFunc": return type(self)._apply("|", self, other)
+    def __and__(self, other: "PseudoBoolFunc") -> "PseudoBoolFunc": return type(self)._apply("&", self, other)
+    def __xor__(self, other: "PseudoBoolFunc") -> "PseudoBoolFunc": return type(self)._apply("^", self, other)
+    def __rshift__(self, other: "PseudoBoolFunc") -> "PseudoBoolFunc": return type(self)._apply("->", self, other)
+    def __lshift__(self, other: "PseudoBoolFunc") -> "PseudoBoolFunc": return type(self)._apply("<-", self, other)
+    def __invert__(self): return type(self)._apply("~", self)
+    def biimp(self, other: "PseudoBoolFunc") -> "PseudoBoolFunc": return type(self)._apply("<->", self, other)
+    def ite(self, o1: "PseudoBoolFunc", o2: "PseudoBoolFunc") -> "PseudoBoolFunc": return self & o1 | ~self & o2
 
     @classmethod
-    @abstractmethod
-    def false(cls) -> "Repr": 
-        raise NotImplementedError()
-
-    @classmethod
-    @abstractmethod
-    def true(cls) -> "Repr": 
-        raise NotImplementedError()
-
-    @classmethod
-    @abstractmethod
-    def apply(cls, op: str, *children) -> "Repr":
-        raise NotImplementedError() 
-
-    @classmethod
-    def parse(cls, formula: str) -> "Repr":
+    def parse(cls, formula: str) -> "PseudoBoolFunc":
         def rec(parsed):
             op, args = parsed[0], parsed[1:]
             if op == "C" and args[0] == "0": return cls.false
             elif op == "C" and args[0] == "1": return cls.true
             elif op == "V": return cls.var(args[0])
-            else: return cls.apply(op, *(rec(a) for a in args))
+            else: return cls._apply(op, *(rec(a) for a in args))
         return rec(formula_parser.parse(formula))

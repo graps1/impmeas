@@ -1,4 +1,4 @@
-from .repr import Repr
+from .repr import PseudoBoolFunc
 from .utils import cnf2dimacs, iter_assignments
 from .formula import Formula, set_pmc_solver, get_pmc_solver
 from .table import Table

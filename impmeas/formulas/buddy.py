@@ -5,7 +5,7 @@ from math import comb
 
 from functools import cache
 
-from .repr import Repr
+from .repr import PseudoBoolFunc
 
 
 BUDDY_CONTEXT_INSTANCE:"BuddyContext" = None
@@ -15,7 +15,9 @@ def set_buddy_context(buddy_context: "BuddyContext"):
 def get_buddy_context():
 	return BUDDY_CONTEXT_INSTANCE
 
-class BuddyNode(Repr):
+class BuddyNode(PseudoBoolFunc):
+	MUST_ALWAYS_BE_BOOLEAN = True
+
 	def __init__(self, node_id : int):
 		super().__init__()
 		self.node_id = node_id
@@ -23,10 +25,29 @@ class BuddyNode(Repr):
 		BUDDY_CONTEXT_INSTANCE._bdd.bdd_addref(self.node_id)
 
 	# --- ABSTRACT METHODS ---
+
+	def __getitem__(self, assignment: dict[str, bool]) -> bool: 
+		if self == BUDDY_CONTEXT_INSTANCE.true: return True
+		elif self == BUDDY_CONTEXT_INSTANCE.false: return False
+		else:
+			sub = self.high if assignment[self.topvar] else self.low
+			return sub[assignment]
+
 	def __hash__(self): 
 		return self.node_id.__hash__()
 
-	def cofactor(self, ass: dict[str, bool]) -> "Repr": 
+	def __copy__(self): 
+		return BuddyNode(self.node_id)
+
+	@property
+	def is_boolean(self):
+		return True
+
+	@property
+	def vars(self) -> set[str]: 
+		return set(v for v,c in self.var_profile.items() if c > 0)
+
+	def cofactor(self, ass: dict[str, bool]) -> "BuddyNode": 
 		r = BUDDY_CONTEXT_INSTANCE.true
 		for x in ass:
 			xf = BUDDY_CONTEXT_INSTANCE.var(x)
@@ -41,28 +62,40 @@ class BuddyNode(Repr):
 		else:
 			f0, f1 = self.branch(self.topvar)
 			f0, f1 = f0.flip(S), f1.flip(S)
-			if self.topvar in S:
-				return BuddyNode.var(self.topvar).ite(f0, f1)	
-			else:
-				return BuddyNode.var(self.topvar).ite(f1, f0)
+			if self.topvar in S: return BuddyNode.var(self.topvar).ite(f0, f1)	
+			else: return BuddyNode.var(self.topvar).ite(f1, f0)
 
-
-	def __call__(self, assignment: dict[str, bool]) -> bool: 
-		if self == BUDDY_CONTEXT_INSTANCE.true: return True
-		elif self == BUDDY_CONTEXT_INSTANCE.false: return False
-		else:
-			sub = self.high if assignment[self.topvar] else self.low
-			return sub(assignment)
-
-	def __copy__(self): 
-		return BuddyNode(self.node_id)
-
+	@classmethod
 	@property
-	def vars(self) -> set[str]: 
-		return set(v for v,c in self.var_profile.items() if c > 0)
+	def false(cls) -> "BuddyNode": 
+		return BUDDY_CONTEXT_INSTANCE.false
+
+	@classmethod
+	@property
+	def true(cls) -> "BuddyNode": 
+		return BUDDY_CONTEXT_INSTANCE.true	
+
+	@classmethod
+	def _apply(cls, op: str, *children) -> "BuddyNode":
+		return BUDDY_CONTEXT_INSTANCE.apply(op, *children)
+
+	@classmethod
+	def var(cls, x: str) -> "BuddyNode": 
+		return BUDDY_CONTEXT_INSTANCE.var(x)
+
+	## END ABSTRACT METHODS
+	## OVERWRITTEN:
 
 	def expectation(self) -> float: 
 		return float(BUDDY_CONTEXT_INSTANCE._bdd.bdd_satcount(self.node_id)) / 2**BUDDY_CONTEXT_INSTANCE.varcount
+
+	def __le__(self, other):
+		return (self >> other) == BuddyNode.true
+
+	def __eq__(self, other : "BuddyNode"): 
+		return isinstance(other, BuddyNode) and self.node_id == other.node_id
+
+	## END OVERWRITTEN
 
 	# --- END ABSTRACT METHODS ---
 
@@ -72,9 +105,6 @@ class BuddyNode(Repr):
 	def __del__(self):
 		if not BUDDY_CONTEXT_INSTANCE.called_done: 
 			BUDDY_CONTEXT_INSTANCE._bdd.bdd_delref(self.node_id)
-
-	def __eq__(self, other : "BuddyNode"): 
-		return isinstance(other, BuddyNode) and self.node_id == other.node_id
 
 	@property
 	def topvar(self) -> str:
@@ -118,26 +148,6 @@ class BuddyNode(Repr):
 			return len(BUDDY_CONTEXT_INSTANCE.vars)
 		var = BUDDY_CONTEXT_INSTANCE._bdd.bdd_var(self.node_id)
 		return BUDDY_CONTEXT_INSTANCE._bdd.bdd_var2level(var)
-
-	# --- delegates ---
-
-	@classmethod
-	def var(cls, x: str) -> "BuddyNode": 
-		return BUDDY_CONTEXT_INSTANCE.var(x)
-
-	@classmethod
-	@property
-	def false(cls) -> "BuddyNode": 
-		return BUDDY_CONTEXT_INSTANCE.false
-
-	@classmethod
-	@property
-	def true(cls) -> "BuddyNode": 
-		return BUDDY_CONTEXT_INSTANCE.true	
-
-	@classmethod
-	def apply(cls, op: str, *children) -> "BuddyNode":
-		return BUDDY_CONTEXT_INSTANCE.apply(op, *children)
 
 class BuddyContext:
 	def __init__(self, vars: list[str], lib:str ="/usr/local/lib/libbdd.so") -> None: 

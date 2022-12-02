@@ -1,9 +1,9 @@
-from ..formulas import Repr, iter_assignments
+from ..formulas import PseudoBoolFunc, iter_assignments, Table
 from functools import cache
-from typing import Callable
 
 @cache
-def omega(f: Repr) -> Repr:
+def omega(f: PseudoBoolFunc) -> PseudoBoolFunc:
+    assert f.is_boolean
     if len(f.vars) == 0:
         return f
     else:
@@ -15,7 +15,8 @@ def omega(f: Repr) -> Repr:
         return xf.ite(high_tf, low_tf)
 
 @cache 
-def upsilon(f: Repr) -> Repr:
+def upsilon(f: PseudoBoolFunc) -> PseudoBoolFunc:
+    assert f.is_boolean
     # upsilon_f(S) = forall ~S. exists S. f
     # thus:
     # - if x not in S: upsilon_f(S) = upsilon_f[x/0](S) & upsilon_f[x/1](S)
@@ -30,13 +31,15 @@ def upsilon(f: Repr) -> Repr:
         xf = type(f).var(x)
         return xf.ite(high_tf, low_tf)
 
-def hkr(f: Repr, kappa = lambda x: 4*(0.5-x)**2) -> Callable[[dict[str,bool]],float]:
-    def ret(ass):
+def hkr(f: PseudoBoolFunc, kappa = lambda x: 4*(0.5-x)**2) -> Table:
+    assert f.is_boolean
+    ret = Table.zeros(list(f.vars))
+    for ass in iter_assignments(f.vars):
         S = {x for x in ass if ass[x]}
         mean = 0
         for alpha in iter_assignments(S):
             f_alpha = f.cofactor(alpha)
             mean += kappa(f_alpha.expectation())
         mean = mean / 2**len(S)
-        return mean
+        ret[ass] = mean
     return ret

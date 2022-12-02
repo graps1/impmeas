@@ -31,9 +31,9 @@ def test_type_invariance():
         T = imp.random_assignment(Xss)
         piT = { pi[x]: T[x] for x in T }
         for kappa in kappas:
-            _, hkr_f = imp.hkr_cgm(f, kappa=kappa)
-            _, hkr_h = imp.hkr_cgm(h, kappa=kappa)
-            assert abs(hkr_f(T) - hkr_h(piT)) <= TOLERANCE
+            hkr_f = imp.hkr_cgm(f, kappa=kappa)
+            hkr_h = imp.hkr_cgm(h, kappa=kappa)
+            assert abs(hkr_f[T] - hkr_h[piT]) <= TOLERANCE
 
 
 def test_compl_invariance():
@@ -51,9 +51,9 @@ def test_compl_invariance():
         S = imp.random_assignment(f.vars)
         nf = ~f
         for kappa in kappas:
-            _, hkr_f = imp.hkr_cgm(f, kappa=kappa)
-            _, hkr_nf = imp.hkr_cgm(nf, kappa=kappa)
-            assert abs(hkr_f(S) - hkr_nf(S)) <= TOLERANCE
+            hkr_f = imp.hkr_cgm(f, kappa=kappa)
+            hkr_nf = imp.hkr_cgm(nf, kappa=kappa)
+            assert abs(hkr_f[S] - hkr_nf[S]) <= TOLERANCE
 
 
 
@@ -70,12 +70,12 @@ def test_decomposition():
         f,g,s,t = imp.random_module(X[:3], Y[:3])
         f_template = imp.Table.var("z").ite(s,t)
 
-        _, E_f = imp.hkr_cgm(f, kappa=kappa_quad) 
-        _, E_g = imp.hkr_cgm(g, kappa=kappa_quad)
-        _, E_f_template = imp.hkr_cgm(f_template, kappa=kappa_quad)
+        E_f = imp.hkr_cgm(f, kappa=kappa_quad) 
+        E_g = imp.hkr_cgm(g, kappa=kappa_quad)
+        E_f_template = imp.hkr_cgm(f_template, kappa=kappa_quad)
 
         for S in imp.iter_assignments(set(f.vars) | {"z"}):
-            Dx_E_f = E_f(S | {"x0":True}) - E_f(S | {"x0":False})
-            Dg_E_f = E_f_template(S | {"z":True}) - E_f_template(S | {"z":False})
-            Dx_E_g = E_g(S | {"x0":True}) - E_g(S | {"x0":False})
+            Dx_E_f = E_f.derivative("x0")
+            Dg_E_f = E_f_template.derivative("z")
+            Dx_E_g = E_g.derivative("x0")
             assert abs( Dx_E_f - Dx_E_g*Dg_E_f) <= TOLERANCE 

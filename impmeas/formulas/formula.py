@@ -1,5 +1,5 @@
 from .gpmc import GPMC
-from .repr import Repr
+from .repr import PseudoBoolFunc
 from .formula_parser import OPERATIONS, PRECEDENCE
 from typing import Union
 import copy
@@ -58,7 +58,9 @@ _SIMP_RULES = [
     ("A <-> 1", "A"),
 ]
 
-class Formula(Repr):
+class Formula(PseudoBoolFunc):
+    MUST_ALWAYS_BE_BOOLEAN = True
+
     def __init__(self, op=None, *children):
         super().__init__()
 
@@ -78,30 +80,42 @@ class Formula(Repr):
 
     # --- ABSTRACT METHODS ---
 
-    def __hash__(self) -> int:
-        return self.__repr__().__hash__()
-
-    def __call__(self, assignment: dict[str, bool]) -> bool:
+    def __getitem__(self, assignment: dict[str, bool]) -> bool:
         if self.op == "V": return assignment[self.c1]
         elif self.op == "C": return {"0": False, "1": True}[self.c1]
-        elif self.op == "~": return not self.c1(assignment)
+        elif self.op == "~": return not self.c1[assignment]
         else: # 2-ary operation
             left, right = self.children
             if self.op == "&":
-                return left(assignment) and right(assignment)
+                return left[assignment] and right[assignment]
             elif self.op == "|":
-                return left(assignment) or right(assignment)
+                return left[assignment] or right[assignment]
             elif self.op == "<->":
-                return left(assignment) == right(assignment)
+                return left[assignment] == right[assignment]
             elif self.op == "->":
-                return not left(assignment) or right(assignment)
+                return not left[assignment] or right[assignment]
             elif self.op == "<-":
-                return left(assignment) or not right(assignment)
+                return left[assignment] or not right[assignment]
             elif self.op == "^":
-                return left(assignment) != right(assignment)
+                return left[assignment] != right[assignment]
+
+    def __hash__(self) -> int:
+        return self.__repr__().__hash__()
 
     def __copy__(self) -> "Formula":
         return Formula(self.op, *(copy.copy(c) for c in self.children))
+
+    def is_boolean(self):
+        return True
+
+    @property     
+    def vars(self) -> set[str]:
+        if self.op == "V": return { self.c1 }
+        elif self.op == "C": return set()
+        else: 
+            ret = set()
+            for c in self.children: ret |= c.vars
+            return ret
 
     def cofactor(self, ass: dict[str, int]) -> "Formula":
         if self.op == "V" and self.c1 in ass: 
@@ -117,14 +131,26 @@ class Formula(Repr):
         elif self.op in ["V", "C"]: return copy.copy(self)
         else: return Formula(self.op, *(c.flip(S) for c in self.children))
 
-    @property     
-    def vars(self) -> set[str]:
-        if self.op == "V": return { self.c1 }
-        elif self.op == "C": return set()
-        else: 
-            ret = set()
-            for c in self.children: ret |= c.vars
-            return ret
+    @classmethod
+    @property
+    def false(cls) -> "Formula": 
+        return cls("C", "0")
+
+    @classmethod
+    @property
+    def true(cls) -> "Formula": 
+        return cls("C", "1")
+
+    @classmethod
+    def _apply(cls, op: str, *children) -> "Formula":
+        return Formula(op, *children)
+
+    @classmethod
+    def var(cls, x: str) -> "Formula": 
+        return cls("V", x)
+
+    ## END ABSTRACT
+    ## THE FOLLOWING IS OVERWRITTEN:
 
     def expectation(self, exists=set()) -> float:
         simp = self.simplify()
@@ -147,12 +173,15 @@ class Formula(Repr):
         sc = PMC_SOLVER.satcount(cnf, exists=exists_ids)
         return  sc / 2**len(simp.vars)
 
-    # --- END ABSTRACT METHODS ---
+    def __le__(self, other) -> bool: raise NotImplementedError()
+    def __ge__(self, other) -> bool: raise NotImplementedError()
 
     def __eq__(self, other) -> bool: 
         return  isinstance(other, Formula) and \
                 self.op == other.op and \
                 all(c1 == c2 for c1,c2 in zip(self.children, other.children))
+
+    # --- END ABSTRACT METHODS ---
 
     def __len__(self) -> int:
         if self.op in ["V", "C"]: return 1
@@ -281,24 +310,6 @@ class Formula(Repr):
                     raise Exception(f"operation {sub.op} unknown!")
         return cnf, sub2idx
 
-
-    @classmethod
-    @property
-    def false(cls) -> "Formula": 
-        return cls("C", "0")
-
-    @classmethod
-    @property
-    def true(cls) -> "Formula": 
-        return cls("C", "1")
-
-    @classmethod
-    def apply(cls, op: str, *children) -> "Formula":
-        return cls(op, *children)
-
-    @classmethod
-    def var(cls, x: str) -> "Formula": 
-        return cls("V", x)
 
 SIMP_RULES = [ (Formula.parse(l), Formula.parse(r)) for l,r in _SIMP_RULES ]
 PMC_SOLVER: "GPMC" = None

@@ -37,8 +37,3 @@ def random_k_cnf(n,m,k) -> tuple[list[list[int]], str]:
         formula = formula + "&" + inner if ctr > 0 else inner 
         cnf.append(clause)
     return cnf, formula
-
-def replace(formula: str, replacements: dict[str,str]):
-    for r in replacements:
-        formula = formula.replace(r, replacements[r])
-    return formula

@@ -28,8 +28,9 @@ def test_equality_for_monotonic_functions():
     for _ in range(100):
         F = X[:5]
         f = imp.random_table(F, monotone=True)
-        for S in imp.iter_assignments(F):
-            assert f[S] == imp.dominating_cgm(f)[S] == imp.rectifying_cgm(f)[S]
+        dcgm_f = imp.dominating_cgm(f)
+        rcgm_f = imp.rectifying_cgm(f)
+        assert f == dcgm_f == rcgm_f
 
 
 def test_quantifier_swap_for_monotone_extensions():
@@ -78,9 +79,9 @@ def test_difference():
         f,g,f1,f0 = imp.random_module(X[:3],Y[:4],monotone=True)
         f_template = imp.Table.var("z").ite(f1,f0)
         for v in vs:
-            Dx_v_f = v(f).derivative("x0") 
-            Dx_v_g = v(g).derivative("x0")
-            Dg_v_f = v(f_template).derivative("z")
+            Dx_v_f = v(f).boolean_derivative("x0") 
+            Dx_v_g = v(g).boolean_derivative("x0")
+            Dg_v_f = v(f_template).boolean_derivative("z")
             assert Dx_v_f == Dx_v_g & Dg_v_f
 
 
