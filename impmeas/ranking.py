@@ -26,7 +26,7 @@ class Ranking:
   def __eq__(self, other):
     return isinstance(other, Ranking) and other.ranking == self.ranking
 
-def from_val(eval : Callable[[PseudoBoolFunc,str], PseudoBoolFunc], f : PseudoBoolFunc, precision=1e-8) -> Ranking:
+def ranking_from_val(eval : Callable[[PseudoBoolFunc,str], PseudoBoolFunc], f : PseudoBoolFunc, precision=1e-8) -> Ranking:
   rank = sorted(
     [ (x, eval(f,x)) for x in f.vars ], 
     key=lambda tpl: tpl[1])
