@@ -1,5 +1,25 @@
-from ..formulas import Repr 
+from ..formulas import Repr, iter_assignments
 from functools import cache 
+from itertools import combinations
+
+def scs(f: Repr, x: str, u: dict[str,bool], c=None) -> float:
+    assert x in f.vars
+    if c is None: c = f[u]
+    for level in range(len(f.vars)):
+        for S in combinations(set(f.vars)-{x}, level):
+            u_xor_S = u | { y: not u[y] for y in S }
+            u_xor_S_xor_x = u_xor_S | { x: not u[x] }
+            if f[u_xor_S] == c and f[u_xor_S_xor_x] != c:
+                return level
+    return float("inf")
+
+def d(f: Repr, u: dict[str,bool]) -> float:
+    for level in range(len(f.vars)+1):
+        for S in combinations(set(f.vars), level):
+            u_xor_S = u | { y: not u[y] for y in S }
+            if f[u_xor_S] == 1:
+                return level
+    return float("inf")
         
 def blame(f: Repr, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, debug=False):
     if x not in f.vars: return 0, 0
