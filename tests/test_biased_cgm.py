@@ -1,11 +1,6 @@
-import sys; sys.path.append("..")
+import impmeas as imp
 
-import cgm 
-import binvec
-import binfunc
-from utils import random_subset, random_monotone_function, random_equivalent, generate_module
-
-vs = [ cgm.omega, cgm.nu ]
+vs = [ imp.dominating_cgm, imp.rectifying_cgm ]
 
 def test_monotonicity():
     '''
@@ -14,11 +9,13 @@ def test_monotonicity():
         hash: sQ2uh27sJS
     '''
     for _ in range(100):
-        f = binfunc.randfunc(bits=6, var_prefix="x")
-        S = random_subset(f.vars)
-        T = random_subset(S)
+        f = imp.random_table([f"x{idx}" for idx in range(3)])
+        S = imp.random_subset(f.vars)
+        T = imp.random_subset(S)
+        S, T = imp.set2ass(S,f.vars), imp.set2ass(T,f.vars)
         for v in vs:
-            assert v(S, f) >= v(T, f)
+            cg = v(f)
+            assert cg[S] >= cg[T], (cg, S, T)
 
 
 def test_equality_for_monotonic_functions():
@@ -28,10 +25,10 @@ def test_equality_for_monotonic_functions():
         hash: 8hzE6SxRKD
     '''
     for _ in range(100):
-        F = { f"x{idx}" for idx in range(5) }
-        f = random_monotone_function(F)
-        for S in binvec.itersets(f.vars):
-            assert cgm.characteristic(S, f) == cgm.omega(S, f) == cgm.nu(S, f)
+        F = [ f"x{idx}" for idx in range(5) ]
+        f = imp.random_table(F, monotone=True)
+        for S in imp.iter_assignments(F):
+            assert f[S] == imp.dominating_cgm(f)[S] == imp.rectifying_cgm(f)[S]
 
 
 def test_quantifier_swap_for_monotone_extensions():
@@ -45,10 +42,11 @@ def test_quantifier_swap_for_monotone_extensions():
         hash: AW0bTa1qHX
     '''
     for _ in range(100):
-        f,g,_,_ = generate_module(4,3,monotone=True)
-        T = random_subset(f.vars-g.vars)
-        assert cgm.exists(g.vars, cgm.forall(T, f)) == \
-               cgm.forall(T, cgm.exists(g.vars, f))
+        X = { f"x{idx}" for idx in range(3) }
+        Y = { f"y{idx}" for idx in range(4) }
+        f,_,_,_ = imp.random_module(list(X),list(Y),monotone=True)
+        T = imp.random_subset(Y-X)
+        assert f.forall(T).exists(X) == f.exists(X).forall(T) 
 
 
 def test_decomposition():
@@ -62,29 +60,32 @@ def test_decomposition():
         hash: smuV9vBwJ8 
     '''
     for _ in range(100):
-        f,g,f1,f0 = generate_module(4,3,monotone=True)
-        S = random_subset(f.vars)
+        X = [f"x{idx}" for idx in range(3)]
+        Y = [f"y{idx}" for idx in range(4)]
+        f,g,f1,f0 = imp.random_module(X,Y,monotone=True)
         for v in vs:
-            assert v(S,f) == (v(S,g) and v(S,f1)) or v(S,f0)
+            assert v(f) == v(g) & v(f1) | v(f0)
 
 def test_difference():
     '''
         checks whether 
 
-            v(S|{x},f) - v(S,f) = 1 iff 
-            v(S|{x},g) - v(S,g) = 1 AND v(S,f1) = 1 AND v(S,f0) = 0
+            Dx v_f = (Dx v_g) * (Dg v_f)
 
         holds, given F cup (G cap H) = emptyset and g >= h
 
         hash: kBvOloehVe
     '''
     for _ in range(100):
-        f,g,f1,f0 = generate_module(4,3,monotone=True)
-        S = random_subset(f.vars)
+        X = [f"x{idx}" for idx in range(3)]
+        Y = [f"y{idx}" for idx in range(4)]
+        f,g,f1,f0 = imp.random_module(X,Y,monotone=True)
+        f_template = imp.Table.var("z").ite(f1,f0)
         for v in vs:
-            diff_f = v(S|{"x0"},f) - v(S,f)
-            diff_g = v(S|{"x0"},g) - v(S,g)
-            assert diff_f == (diff_g and v(S,f1) and not v(S,f0))
+            Dx_v_f = v(f).derivative("x0") 
+            Dx_v_g = v(g).derivative("x0")
+            Dg_v_f = v(f_template).derivative("z")
+            assert Dx_v_f == Dx_v_g & Dg_v_f
 
 
 def test_type_invariance():
@@ -98,10 +99,14 @@ def test_type_invariance():
         hash: hY1Wmc2eBg
     '''
     for _ in range(100):
-        h = binfunc.randfunc(bits=6, var_prefix="x")
-        pi, S = random_equivalent(h.vars, var_pref="y")
-        g = h.flip(S).rename(pi)
+        X = [f"x{idx}" for idx in range(6)]
+        Y = [f"y{idx}" for idx in range(6)]
+        h = imp.random_table(X)
+        S = imp.random_subset(X)
+        pi = {x:y for x,y in zip(X,Y)}
+        g = h.flip(S).replace(pi)
         for v in vs:
-            for T in binvec.itersets(h.vars):
-                piT = { pi[x] for x in T }
-                assert v(T, h) == v(piT, g)
+            v_h, v_g = v(h), v(g)
+            for T in imp.iter_assignments(X):
+                piT = { pi[x]: T[x] for x in T }
+                assert v_h[T] == v_g[piT]

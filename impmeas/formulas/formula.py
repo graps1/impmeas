@@ -111,10 +111,11 @@ class Formula(Repr):
         else: 
             return Formula(self.op, *(c.cofactor(ass) for c in self.children))
 
-    def flip(self, var : str) -> "Formula":
-        if self.op == "V" and self.c1 == var: return Formula("~", self)
+    def flip(self, S : Union[str,set[str]]) -> "Formula":
+        if isinstance(S, str): S = {S}
+        if self.op == "V" and self.c1 in S: return Formula("~", self)
         elif self.op in ["V", "C"]: return copy.copy(self)
-        else: return Formula(self.op, *(c.flip(var) for c in self.children))
+        else: return Formula(self.op, *(c.flip(S) for c in self.children))
 
     @property     
     def vars(self) -> set[str]:

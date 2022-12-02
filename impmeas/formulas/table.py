@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, Union
 from .repr import Repr
 from .utils import iter_assignments
 import copy
@@ -31,6 +31,15 @@ class Table(Repr):
     def __copy__(self): 
         return Table(self.table.copy(), self.vars.copy())
 
+    def replace(self, d: dict[str, str]):
+        cpy_vars = self.vars.copy()
+        for idx in range(len(self.vars)):
+            if self.vars[idx] in d:
+                cpy_vars[idx] = d[self.vars[idx]]
+        assert len(self.vars) == len(set(cpy_vars)), "renaming must be a bijection!"
+        return Table(self.table, cpy_vars)
+
+
     def cofactor(self, ass: dict[str, bool]) -> "Table": 
         new_vars = self.vars.copy()
         for x in ass: new_vars.remove(x)
@@ -40,10 +49,11 @@ class Table(Repr):
             table.table[idx] = self(u | ass)
         return table
 
-    def flip(self, x: str) -> "Table": 
+    def flip(self, S: Union[str, set[str]]) -> "Table": 
+        if isinstance(S,str): S = {S}
         table = copy.copy(self)
         for ass in iter_assignments(self.vars):
-            table[ass] = self(ass | { x: not ass[x] })
+            table[ass] = self(ass | { x: not ass[x] for x in S })
         return table
 
     def expectation(self) -> float:

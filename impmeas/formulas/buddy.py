@@ -34,10 +34,18 @@ class BuddyNode(Repr):
 			r = r & xf
 		return BuddyNode(BUDDY_CONTEXT_INSTANCE._bdd.bdd_restrict(self.node_id, r.node_id))
 
-	def flip(self, x : str) -> "BuddyNode":
-		xf = BUDDY_CONTEXT_INSTANCE.var(x)
-		f0, f1 = self.cofactor({x: False}), self.cofactor({x: True})
-		return xf.ite(f0, f1)	
+	def flip(self, S:Union[str,set[str]]) -> "BuddyNode":
+		if isinstance(S,str): S = {S}
+		if self.topvar is None:
+			return self
+		else:
+			f0, f1 = self.branch(self.topvar)
+			f0, f1 = f0.flip(S), f1.flip(S)
+			if self.topvar in S:
+				return BuddyNode.var(self.topvar).ite(f0, f1)	
+			else:
+				return BuddyNode.var(self.topvar).ite(f1, f0)
+
 
 	def __call__(self, assignment: dict[str, bool]) -> bool: 
 		if self == BUDDY_CONTEXT_INSTANCE.true: return True

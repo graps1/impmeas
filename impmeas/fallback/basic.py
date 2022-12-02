@@ -4,8 +4,7 @@ from typing import Callable, Union
 
 def influence(f: Repr, x: str) -> float:
     if x not in f.vars: return 0
-    f0, f1 = f.branch(x)
-    return (f0^f1).expectation()
+    return f.derivative(x).expectation()
 
 def banzhaf(f: Union[Repr, tuple[set[str], Callable[[dict[str,bool]],float]]], x: str) -> float:
     if isinstance(f,Repr):

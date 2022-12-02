@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from . import formula_parser
 from .utils import iter_assignments
+from typing import Union
 
 class Repr(ABC):
 
@@ -21,13 +22,28 @@ class Repr(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def flip(self, x: str) -> "Repr": 
+    def flip(self, S: Union[str, set[str]]) -> "Repr": 
         raise NotImplementedError()
 
     @property
     @abstractmethod 
     def vars(self) -> set[str]: 
         raise NotImplementedError()
+
+    def forall(self, S:set[str]) -> "Repr":
+        if len(S) == 0:
+            return self
+        else:
+            top = next(iter(S))
+            f0,f1 = self.branch(top)
+            return (f0 & f1).forall(S-{top})
+
+    def exists(self, S:set[str]) -> "Repr":
+        return ~(~self).forall(S)
+
+    def derivative(self, x:str) -> "Repr":
+        f0,f1 = self.branch(x)
+        return f1^f0
 
     def expectation(self) -> float:
         return sum( self(u) for u in iter_assignments(self.vars) ) / 2**len(self.vars)

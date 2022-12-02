@@ -9,11 +9,25 @@ def random_subset(vars: Iterable[str]) -> set[str]:
     ass = random_assignment(vars)
     return { x for x in ass if ass[x] == 1 }
 
-def random_table(vars: list[str]) -> Table:
-    f = Table.zeros(vars)
-    for ass in iter_assignments(vars): 
-        f[ass] = bool(random.randint(0,1))
-    return f
+def set2ass(subset: set[str], domain: set[str]) -> dict[str,bool]:
+    return { x:(x in subset) for x in domain }
+
+def random_table(vars: list[str], monotone=False) -> Table:
+    if len(vars) == 0:
+        return Table.true if random.randint(0,1) else Table.false
+    else:
+        f0 = random_table(vars[1:], monotone=monotone)
+        f1 = random_table(vars[1:], monotone=monotone)
+    if monotone: f1 = f0|f1
+    return Table.var(vars[0]).ite(f1,f0)
+
+def random_module(X:list[str], Y:list[str], monotone=False) -> tuple[Table,Table,Table,Table]:
+    f0 = random_table(Y)
+    f1 = random_table(Y)
+    if monotone: f1 = f1 | f0
+    g = random_table(X)
+    f = g.ite(f1,f0)
+    return f,g,f1,f0
 
 def random_k_cnf(n,m,k) -> tuple[list[list[int]], str]:
     cnf, formula = [], ""
@@ -23,3 +37,8 @@ def random_k_cnf(n,m,k) -> tuple[list[list[int]], str]:
         formula = formula + "&" + inner if ctr > 0 else inner 
         cnf.append(clause)
     return cnf, formula
+
+def replace(formula: str, replacements: dict[str,str]):
+    for r in replacements:
+        formula = formula.replace(r, replacements[r])
+    return formula
