@@ -34,7 +34,7 @@ def blame(f: PseudoBoolFunc, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, debug
             return type(f).false
         elif k == 0:
             fx = f.flip(x)
-            return c.ite(f&fx, ~f&fx)
+            return c.ite(f&~fx, ~f&fx)
         else:
             g_last = g(f,c,k-1)
             result = g_last
