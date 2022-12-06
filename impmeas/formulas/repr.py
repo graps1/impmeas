@@ -72,9 +72,16 @@ class PseudoBoolFunc:
         else:
             return False
 
+    def __ge__(self, other):
+        if isinstance(other,float) or isinstance(other,int):
+            return all(self[ass] >= other for ass in iter_assignments(self.vars))
+        elif isinstance(other, PseudoBoolFunc):
+            return all(self[ass] >= other[ass] for ass in iter_assignments(set(self.vars)|set(other.vars)))
+        else:
+            return False
+
     ## THE REMAINDER IS GOOD
 
-    def __ge__(self, other): return other.__le__(self)
     def __eq__(self, other): return other <= self and self <= other
     def __ne__(self, other): return not (other == self)
 
@@ -137,22 +144,30 @@ class PseudoBoolFunc:
         return f1^f0
 
     ## PSEUDO BOOLEAN OPERATIONS
-    def __add__(self, other: "PseudoBoolFunc") -> "PseudoBoolFunc": return type(self)._apply("+", self, other)
+    def __add__(self, other: Union["PseudoBoolFunc", int, float]) -> "PseudoBoolFunc": return type(self)._apply("+", self, other)
+    def __radd__(self, other: Union["PseudoBoolFunc", int, float]) -> "PseudoBoolFunc": return self.__add__(other)
     def __neg__(self) -> "PseudoBoolFunc": return type(self)._apply("-", self)
-    def __sub__(self, other: "PseudoBoolFunc") -> "PseudoBoolFunc": return self + (-other)
-    def __pow__(self, other: "PseudoBoolFunc") -> "PseudoBoolFunc": return type(self)._apply("**", self, other)
-    def __mul__(self, other: "PseudoBoolFunc") -> "PseudoBoolFunc": return type(self)._apply("*", self, other)
+    def __sub__(self, other: Union["PseudoBoolFunc", int, float]) -> "PseudoBoolFunc": return self + (-other)
+    def __rsub__(self, other: Union["PseudoBoolFunc", int, float]) -> "PseudoBoolFunc": return -self.__sub__(other)
+    def __pow__(self, other: Union["PseudoBoolFunc", int, float]) -> "PseudoBoolFunc": return type(self)._apply("**", self, other)
+    def __mul__(self, other: Union["PseudoBoolFunc", int, float]) -> "PseudoBoolFunc": return type(self)._apply("*", self, other)
+    def __rmul__(self, other: Union["PseudoBoolFunc", int, float]) -> "PseudoBoolFunc": return self.__mul__(other)
     def __abs__(self) -> "PseudoBoolFunc": return type(self)._apply("abs", self)
 
     ## BOOLEAN OPERATIONS
-    def __or__(self, other: "PseudoBoolFunc") -> "PseudoBoolFunc": return type(self)._apply("|", self, other)
-    def __and__(self, other: "PseudoBoolFunc") -> "PseudoBoolFunc": return type(self)._apply("&", self, other)
-    def __xor__(self, other: "PseudoBoolFunc") -> "PseudoBoolFunc": return type(self)._apply("^", self, other)
-    def __rshift__(self, other: "PseudoBoolFunc") -> "PseudoBoolFunc": return type(self)._apply("->", self, other)
-    def __lshift__(self, other: "PseudoBoolFunc") -> "PseudoBoolFunc": return type(self)._apply("<-", self, other)
+    def __or__(self, other: Union["PseudoBoolFunc", bool]) -> "PseudoBoolFunc": return type(self)._apply("|", self, other)
+    def __ror__(self, other: Union["PseudoBoolFunc", bool]) -> "PseudoBoolFunc": return self.__or__(other)
+    def __and__(self, other: Union["PseudoBoolFunc", bool]) -> "PseudoBoolFunc": return type(self)._apply("&", self, other)
+    def __rand__(self, other: Union["PseudoBoolFunc", bool]) -> "PseudoBoolFunc": return self.__and__(other)
+    def __xor__(self, other: Union["PseudoBoolFunc", bool]) -> "PseudoBoolFunc": return type(self)._apply("^", self, other)
+    def __rxor__(self, other: Union["PseudoBoolFunc", bool]) -> "PseudoBoolFunc": return self.__xor__(other)
+    def __rshift__(self, other: Union["PseudoBoolFunc", bool]) -> "PseudoBoolFunc": return type(self)._apply("->", self, other)
+    def __rrshift__(self, other: Union["PseudoBoolFunc", bool]) -> "PseudoBoolFunc": return self.__lshift__(other)
+    def __lshift__(self, other: Union["PseudoBoolFunc", bool]) -> "PseudoBoolFunc": return type(self)._apply("<-", self, other)
+    def __rlshift__(self, other: Union["PseudoBoolFunc", bool]) -> "PseudoBoolFunc": return self.__rshift__(other)
     def __invert__(self): return type(self)._apply("~", self)
-    def biimp(self, other: "PseudoBoolFunc") -> "PseudoBoolFunc": return type(self)._apply("<->", self, other)
-    def ite(self, o1: "PseudoBoolFunc", o2: "PseudoBoolFunc") -> "PseudoBoolFunc": return self & o1 | ~self & o2
+    def biimp(self, other: Union["PseudoBoolFunc", bool]) -> "PseudoBoolFunc": return type(self)._apply("<->", self, other)
+    def ite(self, o1: Union["PseudoBoolFunc",bool], o2: Union["PseudoBoolFunc",bool]) -> "PseudoBoolFunc": return self & o1 | ~self & o2
 
     @classmethod
     def parse(cls, formula: str) -> "PseudoBoolFunc":

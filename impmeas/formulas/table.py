@@ -13,6 +13,10 @@ class Table(PseudoBoolFunc):
         self.__print_mode = print_mode
         assert 2**len(self.vars) == len(self.__table)
 
+    def set_print_mode(self, mode):
+        assert mode in ["table", "primes"]
+        self.__print_mode = mode
+
     def __getitem__(self, key):
         return self.__table[self.assignment2idx(key)]
 
@@ -56,24 +60,26 @@ class Table(PseudoBoolFunc):
 
     @classmethod
     def _apply(cls, op: str, *children) -> "Table":
-        all_vars = list( set().union( *(set(c.vars) for c in children)) ) 
+        assert all( isinstance(c,PseudoBoolFunc) or isinstance(c,float) or isinstance(c,int) for c in children ) 
+        all_vars = list( set().union( *(set(c.vars) for c in children if isinstance(c, PseudoBoolFunc) )) ) 
         new_table = Table.zeros(all_vars)
-        children_are_boolean = all(c.is_boolean for c in children)
+        children_are_boolean = all(c.is_boolean if isinstance(c,PseudoBoolFunc) else c in [0,1] for c in children)
         for ass in iter_assignments(all_vars):
+            vals = [ c[ass] if isinstance(c, PseudoBoolFunc) else c for c in children ]
             val = None
-            if op == "+": val = children[0][ass]+children[1][ass]
-            elif op == "-": val = -children[0][ass]
-            elif op == "*": val = children[0][ass]*children[1][ass]
-            elif op == "**": val = children[0][ass]**children[1][ass]
-            elif op == "abs": val = abs(children[0][ass])
+            if op == "+": val = vals[0]+vals[1]
+            elif op == "-": val = -vals[0]
+            elif op == "*": val = vals[0]*vals[1]
+            elif op == "**": val = vals[0]**vals[1]
+            elif op == "abs": val = abs(vals[0])
             elif children_are_boolean:
-                if op == "~": val = not children[0][ass]
-                elif op == "&": val = children[0][ass] and children[1][ass]
-                elif op == "|": val = children[0][ass] or children[1][ass]
-                elif op == "^": val = children[0][ass] != children[1][ass]
-                elif op == "->": val = not children[0][ass] or children[1][ass]
-                elif op == "<-": val = children[0][ass] or not children[1][ass]
-                elif op == "<->": val = children[0][ass] == children[1][ass]
+                if op == "~": val = not vals[0]
+                elif op == "&": val = vals[0] and vals[1]
+                elif op == "|": val = vals[0] or vals[1]
+                elif op == "^": val = vals[0] != vals[1]
+                elif op == "->": val = not vals[0] or vals[1]
+                elif op == "<-": val = vals[0] or not vals[1]
+                elif op == "<->": val = vals[0] == vals[1]
                 else: raise Exception(f"operation {op} not applicable if all operands are Boolean functions.")
             else: raise Exception(f"operation {op} not applicable.")
             new_table[ass] = val
@@ -120,7 +126,7 @@ class Table(PseudoBoolFunc):
             ret = " ".join(self.vars) + " f" + "\n" + "-"*(len(self.vars)*2+1) 
             for ass in iter_assignments(self.vars):
                 ret += "\n" + " ".join({True: "1", False: "0"}[ass[x]] for x in self.vars)
-                ret += f" {ass:.5}"
+                ret += f" {float(self[ass]):.5}"
             ret += "\n"
         elif self.__print_mode == "primes":
             if self.expectation() == 0: return "0"

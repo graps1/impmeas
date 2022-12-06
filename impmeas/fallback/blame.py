@@ -30,9 +30,7 @@ def blame(f: PseudoBoolFunc, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, debug
 
     @cache
     def g(f,c,k):
-        if x not in f.vars:
-            return type(f).false
-        elif k == 0:
+        if k == 0:
             fx = f.flip(x)
             return c.ite(f&~fx, ~f&fx)
         else:
