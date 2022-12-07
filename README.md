@@ -40,7 +40,7 @@ More methods that can be called on all representations of Boolean functions (eve
 	f.boolean_derivative("y") # outputs: x. 
 	f.derivative("y") # outputs: a pseudo Boolean function equivalent to x*(1-2*z)
 	f.is_boolean # outputs: True	
-	f.derivative("x") == imp.Table.parse("z ^ y") # outputs: True ## checks for semantic equality
+	f.derivative("x") == imp.Table.parse("z ^ y") # outputs: True ## checks for semantic equality (ditto for BDDs)
 	f.exists({"x"}) # outputs: a Boolean function equivalent to y^z
 	f.forall({"x"}) # outputs: a Boolean function equivalent to 0
 	f0, f1 = f.branch("x") # outputs: the cofactors of f w.r.t. x with f0 = 0 and f1 = y^z
@@ -49,6 +49,8 @@ More methods that can be called on all representations of Boolean functions (eve
 	f.prime_implicants() # outputs: [{'y': True, 'x': True, 'z': False}, {'y': False, 'x': True, 'z': True}] ## a list of f's prime implicants
 	f.set_print_mode("table") # whether one wants to print Boolean functions as tables
 	f.set_print_mode("primes") # whether one wants to print Boolean functions as a disjunction of their prime implicants 
+	x = imp.Table.parse("x")
+	f.equivalent(x & f1 | ~x & f0) # output: True ## checks for semantic equivalence 
 ```
 
 It is possible to represent pseudo Boolean functions using tables (and only tables):
@@ -89,8 +91,8 @@ Also doesn't require more packages. Only Boolean operations are supported. We re
 	f = imp.Formula.parse("x & (y ^ z)")
 	g = imp.Formula.parse("x | z")
 	h = g | f # output: (x|z)|x&(y^z) ## note that no simplifications are made
-	h.structural_equality("(x|z)|x&(y^z)") # output: True
-	h.structural_equality("x|(z|x&(y^z))") # output: False
+	h == imp.Fromula.parse("(x|z)|x&(y^z)") # output: True ## structural equality
+	h == imp.Formula.parse("x|(z|x&(y^z))") # output: False
 	h.expectation() # output: 3/2^2 = 0.75. the relative number of true points. (this is always exponential in the number of variables.)
 	# + warning that solver not initialized
 ```

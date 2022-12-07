@@ -3,13 +3,17 @@ from itertools import count
 from typing import Iterable, Union
 from .utils import at_most_cnf
 
-def resp_counts(f: Formula, x: str, debug=False) -> Iterable[int]:
+def resp_counts(f: Formula, x: str, debug=False, alternative=False) -> Iterable[int]:
     new_flip_vars = { f"__z_{y}": y for y in f.vars-{x} }
     replacements = { new_flip_vars[z]: Formula.parse(f"{z} ^ {new_flip_vars[z]}") \
                      for z in new_flip_vars }
     f_flip_vars = f.replace(replacements)
     f_flip_vars_x = f_flip_vars.flip(x)
-    inner = (f & f_flip_vars & ~f_flip_vars_x) | (~f & ~f_flip_vars & f_flip_vars_x)
+
+    if not alternative:
+        inner = (f & f_flip_vars & ~f_flip_vars_x) | (~f & ~f_flip_vars & f_flip_vars_x)
+    else:
+        inner = f_flip_vars ^ f_flip_vars_x
 
     cnf, sub2idx = inner.tseitin()
     new_flip_var_ids = { sub2idx[Formula.var(p)] for p in new_flip_vars } # to index
@@ -31,7 +35,7 @@ def resp_counts(f: Formula, x: str, debug=False) -> Iterable[int]:
         if debug: print(f"size of cnf: {len(new_cnf)}", end=" ")
         yield k, get_pmc_solver().satcount(cnf + cnf_leqk, exists=exists)
     
-def blame(f: Formula, x: str, rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=False):
+def blame(f: Formula, x: str, rho=lambda x: 1/(x+1), cutoff = 1e-4, alternative=False, debug=False):
     if x not in f.vars: return 0, 0
 
     if debug: print(f"=== COMPUTING BLAME for {x} in Formula with size {len(str(f))} ===")
@@ -42,7 +46,7 @@ def blame(f: Formula, x: str, rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=False)
     stopping_reason = "finished iteration."
     varcount = len(f.vars)
     last_ell_sc = 0
-    for k, ell_satcount in resp_counts(f, x, debug=debug):
+    for k, ell_satcount in resp_counts(f, x, debug=debug, alternative=alternative):
         if k == varcount: break
 
         # early stopping criteria
@@ -62,8 +66,8 @@ def blame(f: Formula, x: str, rho=lambda x: 1/(x+1), cutoff = 1e-4, debug=False)
         if debug: print(f"max increase possible={ub_max_increase:.4f}",end=" ")
 
         if ub_max_increase <= cutoff:
-            stopping_reason = "stopped earlier because cannot improve above cutoff.\n" \
-                            + f"current value: {result:.4f}, can be increased by {ub_max_increase:.4f} <= {cutoff:.4f}."
+            stopping_reason = f"stopped earlier because cannot improve above cutoff={cutoff:.4f}.\n" \
+                            + f"current value: {result:.4f}, can only be increased by {ub_max_increase:.4f}."
             stopped_earlier = True
             break
 

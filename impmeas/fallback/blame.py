@@ -22,19 +22,34 @@ def d(f: PseudoBoolFunc, u: dict[str,bool]) -> float:
             if f[u_xor_S] == 1:
                 return level
     return float("inf")
+
+def ascs(f: PseudoBoolFunc, x: str, u: dict[str,bool]) -> float:
+    assert f.is_boolean
+    return d(f.boolean_derivative(x),u)
         
-def blame(f: PseudoBoolFunc, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, debug=False):
+def blame(f: PseudoBoolFunc, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, alternative=False, debug=False):
     assert f.is_boolean
     if x not in f.vars: return 0, 0
     if debug: print(f"=== COMPUTING BLAME for {x} in {f} ===")
 
     @cache
-    def g(f,c,k):
+    def g(f,x,c,k):
         if k == 0:
             fx = f.flip(x)
-            return c.ite(f&~fx, ~f&fx)
+            return f & ~fx if c else ~f & fx
         else:
-            g_last = g(f,c,k-1)
+            g_last = g(f,x,c,k-1)
+            result = g_last
+            for y in set(f.vars) - { x }:
+                result |= g_last.flip(y)
+            return result
+
+    @cache
+    def g_alt(f,x,k):
+        if k == 0:
+            return f.boolean_derivative(x)
+        else:
+            g_last = g_alt(f,x,k-1)
             result = g_last
             for y in set(f.vars) - { x }:
                 result |= g_last.flip(y)
@@ -43,7 +58,8 @@ def blame(f: PseudoBoolFunc, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, debug
     result = 0
     last_ell_ex = 0
     ub_max_increase = 1 
-    last_g_high, last_g_low = type(f).false, type(f).false
+    last_g_high, last_g_low = type(f).false, type(f).false # if not alternative
+    last_g = type(f).false # if alternative
     stopping_reason = "finished iteration."
     for k in range(len(f.vars)):
         if debug and k > 0: print()
@@ -54,14 +70,22 @@ def blame(f: PseudoBoolFunc, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, debug
             stopping_reason = f"stopped because rho({k}) = 0"
             break
 
-        g_high, g_low = g(f, type(f).true, k), g(f, type(f).false, k)
-        if last_g_high == g_high and last_g_low == g_low:
-            stopping_reason = f"stopped earlier because no change in g(f,0,k) and g(f,1,k) occurred."
-            ub_max_increase = 0
-            break
-        last_g_high, last_g_low = g_high, g_low
-
-        new_ell = f.ite(g_high, g_low)
+        if alternative:
+            new_g = g_alt(f,x,k)
+            if last_g == new_g:
+                stopping_reason = f"stopped earlier because no change in g_alt(f,x,k) occurred."
+                ub_max_increase = 0
+                break
+            last_g = new_g
+            new_ell = new_g
+        else:
+            g_high, g_low = g(f, x, True, k), g(f, x, False, k)
+            if last_g_high == g_high and last_g_low == g_low:
+                stopping_reason = f"stopped earlier because no change in g(f,x,0,k) and g(f,x,1,k) occurred."
+                ub_max_increase = 0
+                break
+            last_g_high, last_g_low = g_high, g_low
+            new_ell = f.ite(g_high, g_low)
 
         new_ell_ex = new_ell.expectation()
         t_ex = new_ell_ex - last_ell_ex
@@ -74,9 +98,8 @@ def blame(f: PseudoBoolFunc, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, debug
         if debug: print(f"max increase possible={ub_max_increase:.4f}", end=" ")
 
         if ub_max_increase <= cutoff:
-            stopping_reason = f"stopped earlier because cannot improve above cutoff.\n" + \
-                              f"current value: {result:.4f}, can be increased by "+\
-                              f"{ub_max_increase:.4f} <= {cutoff:.4f}."
+            stopping_reason = f"stopped earlier because cannot improve above cutoff={cutoff:.4f}.\n" + \
+                              f"current value: {result:.4f}, can only be increased by {ub_max_increase:.4f}."
             break
 
         ub_max_increase = 0

@@ -96,6 +96,20 @@ def test_resp_decomposition():
         u = imp.random_assignment(f.vars) 
         assert imp.scs(f, "x0", u, c) == imp.scs( g, "x0", u, c) + imp.d(~f0 & f1, u)
 
+def test_alt_resp_decomposition():
+    '''
+        checks whether the decomposition-lemma of the responsibility holds:
+            
+            ascs^u_x( f ) = ascs^u_x(g) + ascs^u_g(f )
+
+        where f is modular in g
+    '''
+    for _ in range(100):
+        f,g,f1,f0 = imp.random_module(X[:4], Y[:3])
+        f_template = imp.Table.var("z").ite(f1, f0)
+        u = imp.random_assignment(f.vars) 
+        assert imp.ascs(f, "x0", u) == imp.ascs( g, "x0", u) + imp.ascs( f_template, "z", u)
+
 def test_resp_rank_SUD():
     '''
         checks a few lemmas that are used for showing that the 

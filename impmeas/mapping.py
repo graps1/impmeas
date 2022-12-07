@@ -6,11 +6,11 @@ from typing import Callable, Union
 def influence(f: PseudoBoolFunc, x: str) -> float:
     return fallback.influence(f, x)
 
-def blame(f: PseudoBoolFunc, x: str, rho=lambda x:1/(x+1), cutoff=1e-4,debug=False) -> float:
+def blame(f: PseudoBoolFunc, x: str, rho=lambda x:1/(x+1), cutoff=1e-4,alternative=False,debug=False) -> float:
     if get_pmc_solver() and type(f) ==Formula:
         method = mc.blame
     else: method = fallback.blame
-    return method(f,x,rho,cutoff,debug)[0]
+    return method(f=f,x=x,rho=rho,cutoff=cutoff,alternative=alternative,debug=debug)[0]
 
 def banzhaf(f: Union[PseudoBoolFunc,tuple[set[str], Callable[[dict[str, bool]],float]]], x: str) -> float:
     return fallback.banzhaf(f,x)

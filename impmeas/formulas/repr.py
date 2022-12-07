@@ -70,7 +70,7 @@ class PseudoBoolFunc:
         elif isinstance(other, PseudoBoolFunc):
             return all(self[ass] <= other[ass] for ass in iter_assignments(set(self.vars)|set(other.vars)))
         else:
-            return False
+            raise NotImplementedError()
 
     def __ge__(self, other):
         if isinstance(other,float) or isinstance(other,int):
@@ -78,12 +78,13 @@ class PseudoBoolFunc:
         elif isinstance(other, PseudoBoolFunc):
             return all(self[ass] >= other[ass] for ass in iter_assignments(set(self.vars)|set(other.vars)))
         else:
-            return False
+            raise NotImplementedError()
 
     ## THE REMAINDER IS GOOD
 
-    def __eq__(self, other): return other <= self and self <= other
-    def __ne__(self, other): return not (other == self)
+    def __eq__(self, other): return PseudoBoolFunc.__le__(self, other) and PseudoBoolFunc.__ge__(self, other)
+    def __ne__(self, other): return not PseudoBoolFunc.__eq__(self, other)
+    def equivalent(self, other): return PseudoBoolFunc.__eq__(self, other)
 
     def prime_implicants(self) -> list[dict[str, int]]:
         assert self.is_boolean

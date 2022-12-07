@@ -157,8 +157,8 @@ class Formula(PseudoBoolFunc):
         if not PMC_SOLVER: 
             print("PMC_SOLVER not instantiated. iterating over all assignments.")
             return super(Formula, simp).expectation()
-        if simp.structural_equality(Formula.false): return 0
-        if simp.structural_equality(Formula.true): return 1
+        if simp == Formula.false: return 0
+        if simp == Formula.true: return 1
 
         cnf, sub2idx = simp.tseitin() # create cnf encoding
 
@@ -172,7 +172,7 @@ class Formula(PseudoBoolFunc):
         sc = PMC_SOLVER.satcount(cnf, exists=exists_ids)
         return  sc / 2**len(simp.vars)
 
-    def structural_equality(self, other) -> bool: 
+    def __eq__(self, other) -> bool: # structural equality!
         if not isinstance(other, Formula):
             raise NotImplementedError()
         if self.op != other.op: 
@@ -180,7 +180,16 @@ class Formula(PseudoBoolFunc):
         if self.op in ["V", "C"]:
             return self.children[0] == other.children[0] 
         else: 
-            return all(c1.structural_equality(c2) for c1,c2 in zip(self.children, other.children))
+            return all(c1 == c2 for c1,c2 in zip(self.children, other.children))
+
+    def __ge__(self, other): raise NotImplementedError()
+    def __le__(self, other): raise NotImplementedError()
+
+    def equivalent(self, other):
+        if not isinstance(other, Formula):
+            raise NotImplementedError()
+        else:
+            return (self ^ other).expectation() == 0
 
     # --- END ABSTRACT METHODS ---
 
@@ -230,9 +239,9 @@ class Formula(PseudoBoolFunc):
             if temp.op == "V": 
                 if temp.c1 not in replacement:
                     replacement[temp.c1] = formula 
-                return formula.structural_equality(replacement[temp.c1])
+                return formula == replacement[temp.c1]
             elif temp.op == "C":
-                return temp.structural_equality(formula)
+                return temp == formula
             else:
                 return temp.op == formula.op and \
                        len(formula.children) == len(temp.children) and \
@@ -267,7 +276,7 @@ class Formula(PseudoBoolFunc):
 
     def tseitin(self) -> tuple[list[set], dict["Formula", int]]:
         formula = self.simplify()
-        if formula.structural_equality(Formula.false) or formula.structural_equality(Formula.true):
+        if formula == Formula.false or formula == Formula.true:
             return [], {}
 
         stack = [formula]

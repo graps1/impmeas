@@ -92,6 +92,12 @@ def test_influence_NIM_MRP():
             assert bfx >= bfy - TOLERANCE
 
         
-            
+def test_alt_blame_decomposability():
+    rho = lambda x: 2**-x
+    for _ in range(100):
+        f,g,f1,f0 = imp.random_module(X[:3], Y[:3])
+        f_template = imp.Table.var("z").ite(f1,f0)
+        b = lambda f,x: imp.blame(f,x,rho=rho,alternative=True,debug=False)
+        assert abs(b(g,"x0")*b(f_template, "z") - b(f,"x0")) <= TOLERANCE
 
 
