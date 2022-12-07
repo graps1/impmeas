@@ -61,6 +61,7 @@ It is possible to represent pseudo Boolean functions using tables (and only tabl
 The computation of importance values such as CHK's Blame, the Influence and Banzhaf + Shapley values is supported as well,
 
 ```python
+	f = imp.Table.parse("x & (y ^ z)")
 	imp.blame(f, "x", rho=lambda n: 1/(n+1)) # output: 0.625
 	imp.influence(f, "x") # output: 0.5
 	imp.banzhaf(f, "y") # output: 0.0
