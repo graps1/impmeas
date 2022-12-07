@@ -314,9 +314,9 @@ class Formula(PseudoBoolFunc):
 SIMP_RULES = [ (Formula.parse(l), Formula.parse(r)) for l,r in _SIMP_RULES ]
 PMC_SOLVER: "GPMC" = None
 
-def set_pmc_solver(solver: GPMC):
+def set_pmc_solver(src="/usr/local/bin/gpmc", tmp_filename="/tmp/dimacs.cnf", bj=True, cs=3500):
     global PMC_SOLVER
-    PMC_SOLVER = solver
+    PMC_SOLVER = GPMC(src=src, tmp_filename=tmp_filename, bj=bj, cs=cs)
 
 def get_pmc_solver():
     return PMC_SOLVER

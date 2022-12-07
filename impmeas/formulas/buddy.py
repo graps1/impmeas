@@ -9,11 +9,10 @@ from .repr import PseudoBoolFunc
 
 
 BUDDY_CONTEXT_INSTANCE:"BuddyContext" = None
-def set_buddy_context(buddy_context: "BuddyContext"):
+def set_buddy_context(vars: list[str], lib:str ="/usr/local/lib/libbdd.so"):
 	global BUDDY_CONTEXT_INSTANCE
-	BUDDY_CONTEXT_INSTANCE = buddy_context
-def get_buddy_context():
-	return BUDDY_CONTEXT_INSTANCE
+	if BUDDY_CONTEXT_INSTANCE: del BUDDY_CONTEXT_INSTANCE
+	BUDDY_CONTEXT_INSTANCE = BuddyContext(vars, lib=lib)
 
 class BuddyNode(PseudoBoolFunc):
 	MUST_ALWAYS_BE_BOOLEAN = True
@@ -22,7 +21,7 @@ class BuddyNode(PseudoBoolFunc):
 		super().__init__()
 		self.node_id = node_id
 		assert BUDDY_CONTEXT_INSTANCE is not None, "Buddy not instantiated"
-		BUDDY_CONTEXT_INSTANCE._bdd.bdd_addref(self.node_id)
+		BUDDY_CONTEXT_INSTANCE.register(self)
 
 	# --- ABSTRACT METHODS ---
 
@@ -105,10 +104,6 @@ class BuddyNode(PseudoBoolFunc):
 	def ite(self, o1: "BuddyNode", o2: "BuddyNode") -> "BuddyNode": 
 		return BUDDY_CONTEXT_INSTANCE.apply("ite", self, o1, o2)
 
-	def __del__(self):
-		if not BUDDY_CONTEXT_INSTANCE.called_done: 
-			BUDDY_CONTEXT_INSTANCE._bdd.bdd_delref(self.node_id)
-
 	@property
 	def topvar(self) -> str:
 		if self.node_id in [0,1]: return None
@@ -170,9 +165,11 @@ class BuddyContext:
 		# generate dict for varnames
 		self.__vars = tuple(vars)
 		self.__name2var_id = { x : k for k, x in enumerate(self.vars) }
-		self.__called_done = False
+		self.__nodes = []
 
-	# --- ABSTRACT METHODS ---
+	def register(self, node: BuddyNode):
+		self._bdd.bdd_addref(node.node_id)
+		self.__nodes.append(node)
 
 	@property
 	def false(self) -> BuddyNode:
@@ -217,10 +214,6 @@ class BuddyContext:
 		return self.__vars
 
 	@property
-	def called_done(self) -> bool:
-		return self.__called_done
-
-	@property
 	def varcount(self) -> int: 
 		return len(self.vars)
 
@@ -228,12 +221,11 @@ class BuddyContext:
 	def nodenum(self) -> int:
 		return self._bdd.bdd_getnodenum()
 
-	def __enter__(self): 
-		return self
-
-	def __exit__(self, exc_type, exc_value, exc_traceback): 
+	def __del__(self):
+		for node in self.__nodes:
+			if node is not None:
+				self._bdd.bdd_delref(node.node_id)
 		self._bdd.bdd_done()
-		self.__called_done =True
 
 	def set_dynamic_reordering(self, type=True):
 		if type:
