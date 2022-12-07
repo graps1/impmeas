@@ -43,7 +43,7 @@ More methods that can be called on all representations of Boolean functions (eve
 	f.exists({"x"}) # outputs: a Boolean function equivalent to y^z
 	f.forall({"x"}) # outputs: a Boolean function equivalent to 0
 	f0, f1 = f.branch("x") # outputs: the cofactors of f w.r.t. x with f0 = 0 and f1 = y^z
-	f.flip("x") # outputs: a Boolean function equivalent to ~x & (y^z)
+	f.flip("x") # outputs: a Boolean function equivalent to ~x & (y^z) ## only implemented for Table and Formula
 	f.replace({"x":"v"}) # outputs: a Boolean functions equivalent to v & (y^z)
 	f.prime_implicants() # outputs: [{'y': True, 'x': True, 'z': False}, {'y': False, 'x': True, 'z': True}] ## a list of f's prime implicants
 	f.set_print_mode("table") # whether one wants to print Boolean functions as tables

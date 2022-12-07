@@ -20,7 +20,7 @@ def cnf2dimacs(cnf, projected=set()):
     return ret
 
 def iter_assignments(vars: Iterable[str]) -> Iterable[dict[str, int]]:
-    vs_sorted = list(vars)
+    vs_sorted = list(vars)[::-1]
     for ass in range(2**len(vs_sorted)):
         yield { v: bool((ass >> j) % 2) for j,v in enumerate(vs_sorted) }
  
