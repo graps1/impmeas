@@ -57,7 +57,7 @@ def approx(v1, v2):
 
 def test_values():
         
-    imp.formulas.set_pmc_solver()
+    imp.formulas.set_pmc_solver(imp.formulas.GPMC())
     imp.formulas.set_buddy_context("x y z".split())
 
     classes = { imp.Table, imp.Formula, imp.BuddyNode }
