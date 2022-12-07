@@ -22,6 +22,9 @@ def test_compositions():
         if R in [imp.Table, imp.Formula]:
             assert f0.replace({"x":"y", "y":"x"}) == R.parse("y & (x ^ z)")
 
+        if R == imp.Formula:
+            assert f1 == R.parse("x & (y ^ z) | x")
+
 def test_pseudo_boolean():
     f0 = imp.Table.parse("x & (y ^ z)")
     x,z = imp.Table.var("x"), imp.Table.var("z")

@@ -40,6 +40,7 @@ More methods that can be called on all representations of Boolean functions (eve
 	f.boolean_derivative("y") # outputs: x. 
 	f.derivative("y") # outputs: a pseudo Boolean function equivalent to x*(1-2*z)
 	f.is_boolean # outputs: True	
+	f.derivative("x") == imp.Table.parse("z ^ y") # outputs: True ## checks for semantic equality
 	f.exists({"x"}) # outputs: a Boolean function equivalent to y^z
 	f.forall({"x"}) # outputs: a Boolean function equivalent to 0
 	f0, f1 = f.branch("x") # outputs: the cofactors of f w.r.t. x with f0 = 0 and f1 = y^z
@@ -87,7 +88,9 @@ Also doesn't require more packages. Only Boolean operations are supported. We re
 	import impmeas as imp 
 	f = imp.Formula.parse("x & (y ^ z)")
 	g = imp.Formula.parse("x | z")
-	h = g | f # output: x&(y^z)|(x|y) ## note that no simplifications are made
+	h = g | f # output: (x|z)|x&(y^z) ## note that no simplifications are made
+	h.structural_equality("(x|z)|x&(y^z)") # output: True
+	h.structural_equality("x|(z|x&(y^z))") # output: False
 	h.expectation() # output: 3/2^2 = 0.75. the relative number of true points. (this is always exponential in the number of variables.)
 	# + warning that solver not initialized
 ```
