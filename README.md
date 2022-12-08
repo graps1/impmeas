@@ -5,7 +5,8 @@ A framework for operations on Boolean functions and importance measures.
 | Banzhaf | &#10004; | &#10004; | &#10004;
 | Shapley | &#10004; | &#10007; | &#10007; 
 | Influence | &#10004; | &#10004; | &#10004;
-| Blame | &#10004; | &#10004; | &#10004; (via PMC)
+| CHK's Blame | &#10004; | &#10004; | &#10004; (via PMC)
+| modified Blame | &#10004; | &#10004; | &#10004; (via PMC)
 
 | Coalition Game Mapping | Table based | BDD based (Buddy) |
 |--|--|--|
