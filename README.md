@@ -61,11 +61,12 @@ It is possible to represent pseudo Boolean functions using tables (and only tabl
 	print( (3+g-f)**0.5 ) # outputs: a Table with floating point entries
 ```
 
-The computation of importance values such as CHK's Blame, the Influence and Banzhaf + Shapley values is supported as well,
+The computation of importance values such as the (modified) Blame, the Influence and Banzhaf + Shapley values is supported as well,
 
 ```python
 	f = imp.Table.parse("x & (y ^ z)")
 	imp.blame(f, "x", rho=lambda n: 1/(n+1)) # output: 0.625
+	imp.blame(f, "x", rho=lambda n: 1/(n+1), modified=True) # output: 0.75
 	imp.influence(f, "x") # output: 0.5
 	imp.banzhaf(f, "y") # output: 0.0
 	imp.shapley(f, "y") # output: -0.166..

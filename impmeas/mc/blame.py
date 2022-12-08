@@ -3,14 +3,14 @@ from itertools import count
 from typing import Iterable, Union
 from .utils import at_most_cnf
 
-def resp_counts(f: Formula, x: str, debug=False, alternative=False) -> Iterable[int]:
+def resp_counts(f: Formula, x: str, debug=False, modified=False) -> Iterable[int]:
     new_flip_vars = { f"__z_{y}": y for y in f.vars-{x} }
     replacements = { new_flip_vars[z]: Formula.parse(f"{z} ^ {new_flip_vars[z]}") \
                      for z in new_flip_vars }
     f_flip_vars = f.replace(replacements)
     f_flip_vars_x = f_flip_vars.flip(x)
 
-    if not alternative:
+    if not modified:
         inner = (f & f_flip_vars & ~f_flip_vars_x) | (~f & ~f_flip_vars & f_flip_vars_x)
     else:
         inner = f_flip_vars ^ f_flip_vars_x
@@ -35,7 +35,7 @@ def resp_counts(f: Formula, x: str, debug=False, alternative=False) -> Iterable[
         if debug: print(f"size of cnf: {len(new_cnf)}", end=" ")
         yield k, get_pmc_solver().satcount(cnf + cnf_leqk, exists=exists)
     
-def blame(f: Formula, x: str, rho=lambda x: 1/(x+1), cutoff = 1e-4, alternative=False, debug=False):
+def blame(f: Formula, x: str, rho=lambda x: 1/(x+1), cutoff = 1e-4, modified=False, debug=False):
     if x not in f.vars: return 0, 0
 
     if debug: print(f"=== COMPUTING BLAME for {x} in Formula with size {len(str(f))} ===")
@@ -46,7 +46,7 @@ def blame(f: Formula, x: str, rho=lambda x: 1/(x+1), cutoff = 1e-4, alternative=
     stopping_reason = "finished iteration."
     varcount = len(f.vars)
     last_ell_sc = 0
-    for k, ell_satcount in resp_counts(f, x, debug=debug, alternative=alternative):
+    for k, ell_satcount in resp_counts(f, x, debug=debug, modified=modified):
         if k == varcount: break
 
         # early stopping criteria

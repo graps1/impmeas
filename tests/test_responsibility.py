@@ -100,7 +100,7 @@ def test_alt_resp_decomposition():
     '''
         checks whether the decomposition-lemma of the responsibility holds:
             
-            ascs^u_x( f ) = ascs^u_x(g) + ascs^u_g(f )
+            mscs^u_x( f ) = mscs^u_x(g) + mscs^u_g(f )
 
         where f is modular in g
     '''
@@ -108,7 +108,7 @@ def test_alt_resp_decomposition():
         f,g,f1,f0 = imp.random_module(X[:4], Y[:3])
         f_template = imp.Table.var("z").ite(f1, f0)
         u = imp.random_assignment(f.vars) 
-        assert imp.ascs(f, "x0", u) == imp.ascs( g, "x0", u) + imp.ascs( f_template, "z", u)
+        assert imp.mscs(f, "x0", u) == imp.mscs( g, "x0", u) + imp.mscs( f_template, "z", u)
 
 def test_resp_rank_SUD():
     '''

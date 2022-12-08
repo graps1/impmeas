@@ -1,4 +1,4 @@
-from typing import Callable, List, Set, Union, Tuple, Dict
+from typing import Callable, List, Set, Dict
 from .formulas import PseudoBoolFunc
 
 class Ranking:

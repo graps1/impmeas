@@ -23,11 +23,11 @@ def d(f: PseudoBoolFunc, u: dict[str,bool]) -> float:
                 return level
     return float("inf")
 
-def ascs(f: PseudoBoolFunc, x: str, u: dict[str,bool]) -> float:
+def mscs(f: PseudoBoolFunc, x: str, u: dict[str,bool]) -> float:
     assert f.is_boolean
     return d(f.boolean_derivative(x),u)
         
-def blame(f: PseudoBoolFunc, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, alternative=False, debug=False):
+def blame(f: PseudoBoolFunc, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, modified=False, debug=False):
     assert f.is_boolean
     if x not in f.vars: return 0, 0
     if debug: print(f"=== COMPUTING BLAME for {x} in {f} ===")
@@ -45,11 +45,11 @@ def blame(f: PseudoBoolFunc, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, alter
             return result
 
     @cache
-    def g_alt(f,x,k):
+    def g_mod(f,x,k):
         if k == 0:
             return f.boolean_derivative(x)
         else:
-            g_last = g_alt(f,x,k-1)
+            g_last = g_mod(f,x,k-1)
             result = g_last
             for y in set(f.vars) - { x }:
                 result |= g_last.flip(y)
@@ -58,8 +58,8 @@ def blame(f: PseudoBoolFunc, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, alter
     result = 0
     last_ell_ex = 0
     ub_max_increase = 1 
-    last_g_high, last_g_low = type(f).false, type(f).false # if not alternative
-    last_g = type(f).false # if alternative
+    last_g_high, last_g_low = type(f).false, type(f).false # if not modified
+    last_g = type(f).false # if modified
     stopping_reason = "finished iteration."
     for k in range(len(f.vars)):
         if debug and k > 0: print()
@@ -70,10 +70,10 @@ def blame(f: PseudoBoolFunc, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, alter
             stopping_reason = f"stopped because rho({k}) = 0"
             break
 
-        if alternative:
-            new_g = g_alt(f,x,k)
+        if modified:
+            new_g = g_mod(f,x,k)
             if last_g == new_g:
-                stopping_reason = f"stopped earlier because no change in g_alt(f,x,k) occurred."
+                stopping_reason = f"stopped earlier because no change in g_mod(f,x,k) occurred."
                 ub_max_increase = 0
                 break
             last_g = new_g
