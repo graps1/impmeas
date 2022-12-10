@@ -1,7 +1,7 @@
 from ..formulas import Formula, get_pmc_solver 
 from itertools import count
 from typing import Iterable, Union
-from .utils import at_most_cnf
+from .utils import at_most_cnf, totalizer
 
 def resp_counts(f: Formula, x: str, debug=False, modified=False) -> Iterable[int]:
     new_flip_vars = { f"__z_{y}": y for y in f.vars-{x} }
@@ -27,7 +27,8 @@ def resp_counts(f: Formula, x: str, debug=False, modified=False) -> Iterable[int
 
     for k in count(): 
         offset = max(max(abs(c) for c in cl) for cl in cnf)+1 
-        cnf_leqk, new_leqk_vars = at_most_cnf(k, new_flip_var_ids, offset)
+        # cnf_leqk, new_leqk_vars = at_most_cnf(k, new_flip_var_ids, offset)
+        cnf_leqk, new_leqk_vars = totalizer(k, new_flip_var_ids, offset)
         exists = (all_var_ids - orig_var_ids) | new_leqk_vars
         new_cnf = cnf + cnf_leqk
         if debug and k > 0: print()
