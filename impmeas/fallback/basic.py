@@ -8,13 +8,10 @@ def influence(f: PseudoBoolFunc, x: str) -> float:
     return f.boolean_derivative(x).expectation()
 
 def banzhaf(f: PseudoBoolFunc, x: str) -> float:
-    if isinstance(f,PseudoBoolFunc):
-        if x not in f.vars: return 0
-        f0, f1 = f.branch(x)
-        return f1.expectation() - f0.expectation()
-    else: 
-        c = lambda k: 1/2**(len(f.vars)-1)
-        return expectation_of_contributions(f,x,c)
+    assert isinstance(f,PseudoBoolFunc)
+    if x not in f.vars: return 0
+    f0, f1 = f.branch(x)
+    return f1.expectation() - f0.expectation()
 
 def shapley(f: PseudoBoolFunc, x: str) -> float: 
     c = lambda k: 1/(len(f.vars)*math.comb(len(f.vars)-1,k))

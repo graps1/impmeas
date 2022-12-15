@@ -9,10 +9,10 @@ from .repr import PseudoBoolFunc
 
 
 BUDDY_CONTEXT_INSTANCE:"BuddyContext" = None
-def set_buddy_context(vars: list[str], lib:str ="/usr/local/lib/libbdd.so"):
+def set_buddy_context(vars: list[str], lib:str ="/usr/local/lib/libbdd.so", nodenum=1<<28, cachesize=1<<20):
 	global BUDDY_CONTEXT_INSTANCE
 	if BUDDY_CONTEXT_INSTANCE: del BUDDY_CONTEXT_INSTANCE
-	BUDDY_CONTEXT_INSTANCE = BuddyContext(vars, lib=lib)
+	BUDDY_CONTEXT_INSTANCE = BuddyContext(vars, lib=lib, nodenum=nodenum, cachesize=cachesize)
 
 class BuddyNode(PseudoBoolFunc):
 	MUST_ALWAYS_BE_BOOLEAN = True
@@ -21,7 +21,7 @@ class BuddyNode(PseudoBoolFunc):
 		super().__init__()
 		self.node_id = node_id
 		assert BUDDY_CONTEXT_INSTANCE is not None, "Buddy not instantiated"
-		BUDDY_CONTEXT_INSTANCE.register(self)
+		BUDDY_CONTEXT_INSTANCE._bdd.bdd_addref(self.node_id)
 
 	# --- ABSTRACT METHODS ---
 
@@ -37,6 +37,10 @@ class BuddyNode(PseudoBoolFunc):
 
 	def __copy__(self): 
 		return BuddyNode(self.node_id)
+
+	def __del__(self):
+		if BUDDY_CONTEXT_INSTANCE is not None:
+			BUDDY_CONTEXT_INSTANCE._bdd.bdd_delref(self.node_id)
 
 	@property
 	def is_boolean(self):
@@ -56,13 +60,11 @@ class BuddyNode(PseudoBoolFunc):
 
 	def flip(self, S:Union[str,set[str]]) -> "BuddyNode":
 		if isinstance(S,str): S = {S}
-		if self.topvar is None or len({ v for v,c in self.var_profile.items() if c > 0 } & S) == 0:
-			return self
-		else:
-			f0, f1 = self.branch(self.topvar)
-			f0, f1 = f0.flip(S), f1.flip(S)
-			if self.topvar in S: return BuddyNode.var(self.topvar).ite(f0, f1)	
-			else: return BuddyNode.var(self.topvar).ite(f1, f0)
+		g = self
+		for x in S:
+			f0, f1 = g.branch(x)
+			g = BuddyNode.var(x).ite(f0, f1)
+		return g
 
 	@classmethod
 	@property
@@ -148,12 +150,12 @@ class BuddyNode(PseudoBoolFunc):
 		return BUDDY_CONTEXT_INSTANCE._bdd.bdd_var2level(var)
 
 class BuddyContext:
-	def __init__(self, vars: list[str], lib:str ="/usr/local/lib/libbdd.so") -> None: 
+	def __init__(self, vars: list[str], lib:str ="/usr/local/lib/libbdd.so", nodenum=1<<28, cachesize=1<<20) -> None: 
 		buddy = CDLL(lib)
 
 		buddy.bdd_varprofile.restype = POINTER(c_int * len(vars))
 		buddy.bdd_satcount.restype = c_double
-		buddy.bdd_init(1<<28, 1<<20)
+		buddy.bdd_init(nodenum, cachesize)
 		buddy.bdd_setmaxincrease(1<<27)
 		buddy.bdd_setcacheratio(32)
 		buddy.bdd_setvarnum(c_int(len(vars)))
@@ -165,11 +167,11 @@ class BuddyContext:
 		# generate dict for varnames
 		self.__vars = tuple(vars)
 		self.__name2var_id = { x : k for k, x in enumerate(self.vars) }
-		self.__nodes = []
+		# self.__nodes = []
 
-	def register(self, node: BuddyNode):
-		self._bdd.bdd_addref(node.node_id)
-		self.__nodes.append(node)
+	# def register(self, node: BuddyNode):
+	# 	self._bdd.bdd_addref(node.node_id)
+	# 	self.__nodes.append(node)
 
 	@property
 	def false(self) -> BuddyNode:
@@ -222,9 +224,6 @@ class BuddyContext:
 		return self._bdd.bdd_getnodenum()
 
 	def __del__(self):
-		for node in self.__nodes:
-			if node is not None:
-				self._bdd.bdd_delref(node.node_id)
 		self._bdd.bdd_done()
 
 	def set_dynamic_reordering(self, type=True):

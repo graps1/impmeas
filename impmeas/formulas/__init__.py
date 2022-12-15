@@ -4,3 +4,4 @@ from .formula import Formula, set_pmc_solver, get_pmc_solver
 from .gpmc import GPMC
 from .table import Table
 from .buddy import set_buddy_context, BuddyNode
+from .formula_parser import formula2tree

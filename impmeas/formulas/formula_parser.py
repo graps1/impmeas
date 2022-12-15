@@ -53,7 +53,7 @@ class FormulaTransformer(Transformer):
     def start(self, items): return items
     def formula(self, items): return items
 
-def parse(formula: str):
+def formula2tree(formula: str):
     tree = PARSER.parse(formula)
     result = FormulaTransformer().transform(tree)
     return result[0]

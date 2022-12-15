@@ -23,8 +23,11 @@ class GPMC:
         '''
         ret = os.popen(command).read()
         if debug: print(ret)
-        satcount = int(float(re.findall(r"c s exact arb int (.*)", ret)[0]))
-        return satcount 
+        try:
+            satcount = int(float(re.findall(r"c s exact arb int (.*)", ret)[0]))
+            return satcount 
+        except:
+            print(ret)
 
     def satcount(self, cnf: list[list[int]], \
                  debug=False, exists=set()):

@@ -171,11 +171,12 @@ class PseudoBoolFunc:
     def ite(self, o1: Union["PseudoBoolFunc",bool], o2: Union["PseudoBoolFunc",bool]) -> "PseudoBoolFunc": return self & o1 | ~self & o2
 
     @classmethod
-    def parse(cls, formula: str) -> "PseudoBoolFunc":
+    def parse(cls, formula: Union[tuple,str]) -> "PseudoBoolFunc":
         def rec(parsed):
             op, args = parsed[0], parsed[1:]
             if op == "C" and args[0] == "0": return cls.false
             elif op == "C" and args[0] == "1": return cls.true
             elif op == "V": return cls.var(args[0])
             else: return cls._apply(op, *(rec(a) for a in args))
-        return rec(formula_parser.parse(formula))
+        if isinstance(formula, str): formula = formula_parser.formula2tree(formula)
+        return rec(formula)
