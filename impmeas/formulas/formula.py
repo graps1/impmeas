@@ -275,11 +275,11 @@ class Formula(PseudoBoolFunc):
         else: return Formula(self.op, *(c.replace(d) for c in self.children))
 
     def tseitin(self) -> tuple[list[set], dict["Formula", int]]:
-        formula = self.simplify()
-        if formula == Formula.false or formula == Formula.true:
+        # formula = self.simplify()
+        if self == Formula.false or self == Formula.true:
             return [], {}
 
-        stack = [formula]
+        stack = [self]
         sub2idx = set()
         subs = set()
         while len(stack) > 0:
@@ -296,7 +296,7 @@ class Formula(PseudoBoolFunc):
         sub2idx = {k: v for v,k in enumerate(sub2idx, start=1)}
 
         # src: https://en.wikipedia.org/wiki/Tseytin_transformation
-        cnf = [ { sub2idx[formula] } ]
+        cnf = [ { sub2idx[self] } ]
         for sub, children in subs:
             C = sub2idx[sub]
             A = sub2idx[children[0]] # 1 or 2-ary operation

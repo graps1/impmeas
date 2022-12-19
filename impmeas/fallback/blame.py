@@ -1,4 +1,4 @@
-from ..formulas import PseudoBoolFunc, iter_assignments
+from ..formulas import PseudoBoolFunc, iter_assignments, add_buddy_delete_callback
 from functools import cache 
 from itertools import combinations
 
@@ -26,34 +26,34 @@ def d(f: PseudoBoolFunc, u: dict[str,bool]) -> float:
 def mscs(f: PseudoBoolFunc, x: str, u: dict[str,bool]) -> float:
     assert f.is_boolean
     return d(f.boolean_derivative(x),u)
+
+@cache
+def g(f,x,c,k):
+    if k == 0:
+        fx = f.flip(x)
+        return f & ~fx if c else ~f & fx
+    else:
+        g_last = g(f,x,c,k-1)
+        result = g_last
+        for y in set(f.vars) - { x }:
+            result |= g_last.flip(y)
+        return result
+
+@cache
+def g_mod(f,x,k):
+    if k == 0:
+        return f.boolean_derivative(x)
+    else:
+        g_last = g_mod(f,x,k-1)
+        result = g_last
+        for y in set(f.vars) - { x }:
+            result |= g_last.flip(y)
+        return result
         
 def blame(f: PseudoBoolFunc, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, modified=False, debug=False):
     assert f.is_boolean
     if x not in f.vars: return 0, 0
     if debug: print(f"=== COMPUTING BLAME for {x} in {f} ===")
-
-    @cache
-    def g(f,x,c,k):
-        if k == 0:
-            fx = f.flip(x)
-            return f & ~fx if c else ~f & fx
-        else:
-            g_last = g(f,x,c,k-1)
-            result = g_last
-            for y in set(f.vars) - { x }:
-                result |= g_last.flip(y)
-            return result
-
-    @cache
-    def g_mod(f,x,k):
-        if k == 0:
-            return f.boolean_derivative(x)
-        else:
-            g_last = g_mod(f,x,k-1)
-            result = g_last
-            for y in set(f.vars) - { x }:
-                result |= g_last.flip(y)
-            return result
 
     result = 0
     last_ell_ex = 0
@@ -109,3 +109,7 @@ def blame(f: PseudoBoolFunc, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, modif
         print(stopping_reason)
         print(f"=== DONE ===")
     return result, result + ub_max_increase
+
+
+add_buddy_delete_callback(g.cache_clear)
+add_buddy_delete_callback(g_mod.cache_clear)

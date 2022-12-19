@@ -1,4 +1,4 @@
-from ..formulas import BuddyNode
+from ..formulas import BuddyNode, add_buddy_delete_callback
 from functools import cache
 
 @cache
@@ -20,3 +20,6 @@ def upsilon(f: BuddyNode):
         low_tf = upsilon(low) & upsilon(high)
         high_tf = upsilon(low | high)
         return BuddyNode.var(f.topvar).ite(high_tf, low_tf)
+
+add_buddy_delete_callback(omega.cache_clear)
+add_buddy_delete_callback(upsilon.cache_clear)

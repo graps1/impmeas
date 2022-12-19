@@ -1,4 +1,4 @@
-from ..formulas import PseudoBoolFunc, iter_assignments, Table
+from ..formulas import PseudoBoolFunc, iter_assignments, Table, add_buddy_delete_callback 
 from functools import cache
 
 @cache
@@ -43,3 +43,6 @@ def hkr(f: PseudoBoolFunc, kappa = lambda x: 4*(0.5-x)**2) -> Table:
         mean = mean / 2**len(S)
         ret[ass] = mean
     return ret
+
+add_buddy_delete_callback(omega.cache_clear)
+add_buddy_delete_callback(upsilon.cache_clear)

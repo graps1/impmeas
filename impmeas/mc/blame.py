@@ -5,7 +5,7 @@ from .utils import at_most_cnf, totalizer
 
 def resp_counts(f: Formula, x: str, debug=False, modified=False) -> Iterable[int]:
     new_flip_vars = { f"__z_{y}": y for y in f.vars-{x} }
-    replacements = { new_flip_vars[z]: Formula.parse(f"{z} ^ {new_flip_vars[z]}") \
+    replacements = { new_flip_vars[z]: Formula.parse(("^", ("V", z), ("V", new_flip_vars[z]))) \
                      for z in new_flip_vars }
     f_flip_vars = f.replace(replacements)
     f_flip_vars_x = f_flip_vars.flip(x)
