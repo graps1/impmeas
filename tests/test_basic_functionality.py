@@ -1,7 +1,7 @@
 import impmeas as imp
     
-imp.formulas.set_pmc_solver(imp.formulas.GPMC())
-imp.formulas.set_buddy_context(list("xyzvw"))
+imp.set_pmc_solver(imp.GPMC())
+imp.buddy_initialize(list("xyzvw"))
 
 Rs = [ imp.Table, imp.Formula, imp.BuddyNode ]
 

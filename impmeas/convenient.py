@@ -29,11 +29,15 @@ def random_module(X:list[str], Y:list[str], monotone=False) -> tuple[Table,Table
     f = g.ite(f1,f0)
     return f,g,f1,f0
 
-def random_k_cnf(n,m,k) -> tuple[list[list[int]], str]:
+def random_k_cnf(n,m,k) -> tuple[list[list[int]], tuple]:
     cnf, formula = [], ""
     for ctr in range(m):
         clause = [(random.randint(0,1)*2-1)*random.randint(1,n) for _ in range(k)]
-        inner = "(" + "|".join(f"x{idx}" if idx>0 else f"~x{-idx}" for idx in clause) + ")"
-        formula = formula + "&" + inner if ctr > 0 else inner 
+        inner = None
+        for el in clause:
+            val = ("V", f"x{el}") if el >= 0 else ("~", ("V", f"x{-el}"))
+            if not inner: inner = val
+            else: inner = ("|", inner, val)
+        formula = ("&", formula, inner) if ctr > 0 else inner 
         cnf.append(clause)
     return cnf, formula

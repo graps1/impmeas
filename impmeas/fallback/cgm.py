@@ -15,7 +15,7 @@ def omega(f: PseudoBoolFunc) -> PseudoBoolFunc:
         return xf.ite(high_tf, low_tf)
 
 @cache 
-def upsilon(f: PseudoBoolFunc) -> PseudoBoolFunc:
+def nu(f: PseudoBoolFunc) -> PseudoBoolFunc:
     assert f.is_boolean
     # upsilon_f(S) = forall ~S. exists S. f
     # thus:
@@ -26,8 +26,8 @@ def upsilon(f: PseudoBoolFunc) -> PseudoBoolFunc:
     else:
         x = next(iter(f.vars))
         low, high = f.branch(x)
-        low_tf = upsilon(low) & upsilon(high)
-        high_tf = upsilon(low | high)
+        low_tf = nu(low) & nu(high)
+        high_tf = nu(low | high)
         xf = type(f).var(x)
         return xf.ite(high_tf, low_tf)
 
@@ -45,4 +45,4 @@ def hkr(f: PseudoBoolFunc, kappa = lambda x: 4*(0.5-x)**2) -> Table:
     return ret
 
 add_buddy_delete_callback(omega.cache_clear)
-add_buddy_delete_callback(upsilon.cache_clear)
+add_buddy_delete_callback(nu.cache_clear)

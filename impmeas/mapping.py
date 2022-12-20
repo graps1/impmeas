@@ -27,7 +27,7 @@ def dominating_cgm(f: PseudoBoolFunc) -> PseudoBoolFunc:
 def rectifying_cgm(f: PseudoBoolFunc) -> PseudoBoolFunc:
     method = {
         BuddyNode: bdds.upsilon,
-    }.get(type(f), fallback.upsilon)
+    }.get(type(f), fallback.nu)
     return method(f)
 
 def hkr_cgm(f: PseudoBoolFunc, kappa = lambda x: 4*(0.5-x)**2) -> Table:

@@ -1,4 +1,4 @@
-from .formulas import Formula, Table, BuddyNode, PseudoBoolFunc, buddy_initialize, set_pmc_solver
+from .formulas import Formula, Table, BuddyNode, PseudoBoolFunc, buddy_initialize, set_pmc_solver, GPMC
 from .formulas.utils import iter_assignments
 from .mc import totalizer, at_most_cnf
 from .mapping import influence, banzhaf, shapley, blame, dominating_cgm, hkr_cgm, rectifying_cgm
