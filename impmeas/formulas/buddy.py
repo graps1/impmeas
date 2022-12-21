@@ -161,7 +161,7 @@ VAR_NAME2LEVEL = None
 on_delete_cbs = []
 BUDDY_OBJ_INSTANCE_COUNTER = 0
 
-def buddy_initialize(vars: list[str], lib:str ="/usr/local/lib/libbdd.so", nodenum=1<<28, cachesize=1<<20) -> None: 
+def buddy_initialize(vars: list[str], lib:str ="/usr/local/lib/libbdd.so", nodenum=1<<20, cachesize=1<<15) -> None: 
 	global BUDDY_OBJ, VARS, VAR_NAME2LEVEL, on_delete_cbs, BUDDY_OBJ_INSTANCE_COUNTER
 
 	if BUDDY_OBJ is not None:
