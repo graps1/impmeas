@@ -103,8 +103,8 @@ Efficiency can be gained by installing the GPMC model counter (https://git.trs.c
 
 ```python
 	import impmeas as imp
-	solver = imp.formulas.GPMC(src='/usr/local/bin/gpmc', tmp_filename='/tmp/dimacs.cnf', bj=True, cs=3500) # here, /usr/local/bin/gpmc is the directory of the GPMC binary
-	imp.formulas.set_pmc_solver(solver)
+	solver = imp.GPMC(src='/usr/local/bin/gpmc', tmp_filename='/tmp/dimacs.cnf', bj=True, cs=3500) # here, /usr/local/bin/gpmc is the directory of the GPMC binary
+	imp.set_pmc_solver(solver)
 	f = imp.Formula.parse("x & (y ^ z)")
 	print(f.expectation()) # output: 0.25. expected value of f without warning
 ```
@@ -117,13 +117,13 @@ We can use Buddy (https://buddy.sourceforge.net/manual/main.html, https://github
 
 ```python
 	import impmeas as imp 
-	imp.formulas.set_buddy_context(list("xyz"), lib="/usr/local/lib/libbdd.so") # specify the used variables and their order and the library beforehand
+	imp.buddy_initialize(list("xyz"), lib="/usr/local/lib/libbdd.so") # specify the used variables and their order and the library beforehand
 	f = imp.BuddyNode.parse("x & (y ^ z)")
 	g = imp.BuddyNode.parse("x | z")
 	h = g | f # output: <impmeas.formulas.buddy.BuddyNode at ....> 
 	h.expectation() # output: 3/2^2 = 0.75. the relative number of true points.
 	f.var_profile # output: { 'x': 1, 'y': 1, 'z': 2 } ## the number of nodes per variable
-	f.dump("/tmp/f.pdf") # creates a pdf that displays f (nodes are labeled with the corresponding variable index)
+	f.dump("/tmp/f.pdf") # creates a pdf that contains the BDD for f (nodes are labeled with the corresponding variable index)
 ```
 
 The dominating and rectifying coalition game mappings can be represented using BDDs as follows:
