@@ -1,5 +1,4 @@
 import time
-import random
 
 def time_op(func):
     def wrapper(*args, **kwargs):
