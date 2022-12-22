@@ -144,3 +144,24 @@ Can be found under `impmeas/notebooks`.
 * `HKR_constancy_measures.ipynb` renders HKR's constancy measures.
 * `special_class_of_functions.ipynb` contains a class of Boolean functions that introduces a lot of "disagreement" between different importance value functions.
 * `statistics.ipynb` contains a benchmark that measures how fast importance values can be computed.
+
+## Parsing Formulas 
+
+Parsing formulas using lark is quite slow for larger formulas. It is advised to use
+
+```python
+	x,y,z = imp.Formula.var("x"), imp.Formula.var("y"), imp.Formula.var("z")
+	f = x & (y ^ z)
+	print(f) # output: x&(y^z)
+```
+
+or comparable instead. One can also enter already parsed formulas as tree, like so:
+
+```python
+	variable = ("V", "x")
+	constant = ("C", "0") # or ("C", "1")
+	composition = ("&", variable, constant)
+	negation = ("~", composition)
+	f = imp.Formula.parse(negation)
+	print(f) # output: ~(x&0)
+```
