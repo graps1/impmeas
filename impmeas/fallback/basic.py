@@ -1,4 +1,4 @@
-from ..formulas import PseudoBoolFunc, iter_assignments, BuddyNode
+from ..representation import PseudoBoolFunc, iter_assignments, BuddyNode
 import math
 from typing import Callable, Union
 
@@ -8,7 +8,7 @@ def influence(f: PseudoBoolFunc, x: str) -> float:
     return f.boolean_derivative(x).expectation()
 
 def banzhaf(f: PseudoBoolFunc, x: str) -> float:
-    assert isinstance(f,PseudoBoolFunc)
+    assert isinstance(f,PseudoBoolFunc), type(f)
     if x not in f.vars: return 0
     f0, f1 = f.branch(x)
     return f1.expectation() - f0.expectation()

@@ -1,10 +1,11 @@
-from ..formulas import Formula, get_pmc_solver 
+from ..representation import Formula, get_pmc_solver 
 from itertools import count
 from typing import Iterable, Union
 from .utils import at_most_cnf, totalizer
 
 def resp_counts(f: Formula, x: str, debug=False, modified=False) -> Iterable[int]:
-    new_flip_vars = { f"__z_{y}": y for y in f.vars-{x} }
+    max_varlength = max(len(v) for v in f.vars)
+    new_flip_vars = { f"{'_'*max_varlength}z_{y}": y for y in f.vars-{x} }
     replacements = { new_flip_vars[z]: Formula.parse(("^", ("V", z), ("V", new_flip_vars[z]))) \
                      for z in new_flip_vars }
     f_flip_vars = f.replace(replacements)
@@ -15,15 +16,10 @@ def resp_counts(f: Formula, x: str, debug=False, modified=False) -> Iterable[int
     else:
         inner = f_flip_vars ^ f_flip_vars_x
 
-    cnf, sub2idx = inner.tseitin()
-    new_flip_var_ids = { sub2idx[Formula.var(p)] for p in new_flip_vars } # to index
-    orig_var_ids = { sub2idx[Formula.var(p)] for p in f.vars }
-    all_var_ids = set(sub2idx.values())
-
-    # new_card_vars: set[int]
-    # new_flip_vars: set[int]
-    # sub2idx: dict[Formula,int]
-    # tseitin_vars: set[int]
+    cnf, var2idx, newvars = inner.tseitin(minimize_new_variables=True)
+    new_flip_var_ids = { var2idx[p] for p in new_flip_vars } # to index
+    orig_var_ids = { var2idx[p] for p in f.vars }
+    all_var_ids = set(var2idx.values()) | set(newvars)
 
     for k in count(): 
         offset = max(max(abs(c) for c in cl) for cl in cnf)+1 
@@ -36,7 +32,7 @@ def resp_counts(f: Formula, x: str, debug=False, modified=False) -> Iterable[int
         if debug: print(f"size of cnf: {len(new_cnf)}", end=" ")
         yield k, get_pmc_solver().satcount(cnf + cnf_leqk, exists=exists)
     
-def blame(f: Formula, x: str, rho=lambda x: 1/(x+1), cutoff = 1e-4, modified=False, debug=False):
+def blame(f: Formula, x: str, rho=lambda x: 1/(x+1), cutoff = 0, modified=False, debug=False):
     if x not in f.vars: return 0, 0
 
     if debug: print(f"=== COMPUTING BLAME for {x} in Formula with size {len(str(f))} ===")

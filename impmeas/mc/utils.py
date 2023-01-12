@@ -1,4 +1,4 @@
-from ..formulas import Formula
+from ..representation import Formula
 
 def at_most(k: int, X: set, new_var_prefix="__z_") -> tuple[Formula, set[str]]:
     assert k < len(X)

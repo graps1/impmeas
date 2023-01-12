@@ -1,6 +1,6 @@
 import random
 from typing import Iterable
-from .formulas import Table, iter_assignments
+from .representation import Table, iter_assignments
 
 def random_assignment(vars: Iterable[str]) -> dict[str,bool]:
     return { x: bool(random.randint(0,1)) for idx,x in enumerate(vars) }
@@ -41,3 +41,21 @@ def random_k_cnf(n,m,k) -> tuple[list[list[int]], tuple]:
         formula = ("&", formula, inner) if ctr > 0 else inner 
         cnf.append(clause)
     return cnf, formula
+
+def parse_dimacs(dimacs) -> tuple[tuple, list, int, int]:
+    formula, cnf, nvars, nclauses = None, [], None, None
+    for el in dimacs.strip().split("\n"):
+        if el.startswith("c"): continue
+        elif el.startswith("p"):
+            # vars clauses
+            nvars = int(el.split()[2])
+            nclauses = int(el.split()[3])
+        else:
+            clause = [ int(val) for val in el.split()[:-1] ]
+            cnf.append(clause)
+            inner = None
+            for lit in clause:
+                littpl = ("V", f"x{lit}") if lit > 0 else ("~", ("V", f"x{-lit}"))
+                inner = ("|", inner, littpl) if inner else littpl
+            formula = ("&", inner, formula) if formula else inner
+    return formula, cnf, nvars, nclauses

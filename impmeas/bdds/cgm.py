@@ -1,4 +1,4 @@
-from ..formulas import BuddyNode, add_buddy_delete_callback
+from ..representation import BuddyNode, add_buddy_delete_callback
 from functools import cache
 
 @cache

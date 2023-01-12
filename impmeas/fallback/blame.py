@@ -1,4 +1,4 @@
-from ..formulas import PseudoBoolFunc, iter_assignments, add_buddy_delete_callback
+from ..representation import PseudoBoolFunc, iter_assignments, add_buddy_delete_callback, BuddyNode
 from functools import cache 
 from itertools import combinations
 
@@ -50,7 +50,7 @@ def g_mod(f,x,k):
             result |= g_last.flip(y)
         return result
         
-def blame(f: PseudoBoolFunc, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, modified=False, debug=False):
+def blame(f: PseudoBoolFunc, x: str, rho = lambda x: 1/(x+1), cutoff=0, modified=False, debug=False):
     assert f.is_boolean
     if x not in f.vars: return 0, 0
     if debug: print(f"=== COMPUTING BLAME for {x} in {f} ===")
@@ -87,6 +87,8 @@ def blame(f: PseudoBoolFunc, x: str, rho = lambda x: 1/(x+1), cutoff=1e-4, modif
             last_g_high, last_g_low = g_high, g_low
             new_ell = f.ite(g_high, g_low)
 
+        if debug and isinstance(new_ell, BuddyNode):
+            print(f"bdd size={new_ell.nodecount}", end=" ")
         new_ell_ex = new_ell.expectation()
         t_ex = new_ell_ex - last_ell_ex
         last_ell_ex = new_ell_ex

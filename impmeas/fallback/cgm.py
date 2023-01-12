@@ -1,4 +1,4 @@
-from ..formulas import PseudoBoolFunc, iter_assignments, Table, add_buddy_delete_callback 
+from ..representation import PseudoBoolFunc, iter_assignments, Table, add_buddy_delete_callback 
 from functools import cache
 
 @cache
