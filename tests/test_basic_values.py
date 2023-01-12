@@ -70,3 +70,12 @@ def test_values():
             f = cls.parse(formula)
             for x, r in zip("xyz", results):
                 assert approx(method(f, x), r), (type(f), f)
+
+    
+    # influence computation approaches
+    for _ in range(10):
+        cnf, form = imp.random_k_cnf(10,30,6)
+        form = imp.Formula.parse(form)
+        I_form = imp.influence(form, "x1")
+        I_cnf = imp.influence_cnf(cnf, 1, imp.GPMC())
+        assert abs(I_form - I_cnf) <= 1e-10

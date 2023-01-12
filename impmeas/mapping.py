@@ -1,7 +1,10 @@
-from . import PseudoBoolFunc, Formula, BuddyNode, Table
+from . import PseudoBoolFunc, Formula, BuddyNode, Table, GPMC
 from . import mc, bdds, fallback
 from .representation import get_pmc_solver
 from typing import Callable, Union
+
+def influence_cnf(cnf: list, x: str, solver: GPMC) -> float:
+    return fallback.influence_cnf(cnf,x,solver)
 
 def influence(f: PseudoBoolFunc, x: str) -> float:
     return fallback.influence(f, x)
