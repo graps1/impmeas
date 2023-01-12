@@ -1,5 +1,5 @@
 from typing import Callable, List, Set, Dict
-from .formulas import PseudoBoolFunc
+from .representation import PseudoBoolFunc
 
 class Ranking:
   ranking : List[Set[str]]
