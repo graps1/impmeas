@@ -9,7 +9,7 @@ setup(
                 "impmeas.bdds",
                 "impmeas.mc",
                 "impmeas.fallback",
-                "impmeas.formulas"
+                "impmeas.representation"
             ],
             exclude=[
                 "tests",
