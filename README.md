@@ -1,14 +1,14 @@
 A framework for operations on Boolean functions and importance measures. 
 
-| Value | Table based | BDD based (Buddy) | #SAT based (GPMC) |
+| Value | Table based | BuDDy | GPMC |
 |--|--|--|--|
 | Banzhaf | &#10004; | &#10004; | &#10004;
 | Shapley | &#10004; | &#10007; | &#10007; 
 | Influence | &#10004; | &#10004; | &#10004;
-| CHK's Blame | &#10004; | &#10004; | &#10004; (via PMC)
-| modified Blame | &#10004; | &#10004; | &#10004; (via PMC)
+| CHK's Blame | &#10004; | &#10004; | &#10004;
+| modified Blame | &#10004; | &#10004; | &#10004;
 
-| Coalition Game Mapping | Table based | BDD based (Buddy) |
+| Coalition Game Mapping | Table based | BuDDy |
 |--|--|--|
 | Dominating CGM | &#10004; | &#10004;
 | Rectifying CGM | &#10004; | &#10004;
@@ -24,7 +24,7 @@ Requires lark for parsing formulas (https://github.com/lark-parser/lark).
 
 ### Table based representations
 
-No further packages are required. One can instantiate Boolean functions represented by tables (i.e. a column vectors of size $2^n$) as follows:
+One can instantiate Boolean functions represented by tables (i.e. a column vectors of size $2^n$) as follows:
 
 ```python
 	import impmeas as imp 
@@ -93,7 +93,7 @@ Also doesn't require more packages. Only Boolean operations are supported. We re
 	f = imp.Formula.parse("x & (y ^ z)")
 	g = imp.Formula.parse("x | z")
 	h = g | f # output: (x|z)|x&(y^z) ## note that no simplifications are made
-	h == imp.Fromula.parse("(x|z)|x&(y^z)") # output: True ## structural equality
+	h == imp.Formula.parse("(x|z)|x&(y^z)") # output: True ## structural equality
 	h == imp.Formula.parse("x|(z|x&(y^z))") # output: False
 	h.expectation() # output: 3/2^2 = 0.75. the relative number of true points. (this is always exponential in the number of variables.)
 	# + warning that solver not initialized
