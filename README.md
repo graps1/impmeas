@@ -136,14 +136,14 @@ The dominating and rectifying coalition game mappings can be represented using B
 
 Banzhaf, Influence and Blame values can be computed relatively efficiently using BDDs.
 
-## Examples
+## Examples and Benchmarks
 
 Can be found under `impmeas/notebooks`.
 
 * `examples.ipynb` consists of multiple examples that show how one can compute importance values using Buddy, GPMC or simple table based representations.
 * `HKR_constancy_measures.ipynb` renders HKR's constancy measures.
 * `special_class_of_functions.ipynb` contains a class of Boolean functions that introduces a lot of "disagreement" between different importance value functions.
-* `statistics.ipynb` contains a benchmark that measures how fast importance values can be computed.
+* `impmeas/notebooks/benchmarks` contains data and notebooks used for executing the ISCAS'99 and random CNF benchmarks.
 
 ## Parsing Formulas 
 
