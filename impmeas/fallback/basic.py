@@ -11,7 +11,6 @@ def influence_cnf(cnf:list, x:int, solver: GPMC):
     cnf_simp_wo_x = [[lit for lit in cl if abs(lit) != x] for cl in cnf_simp]
     vars_cnf_wo_x = max(max(abs(lit) for lit in cl) for cl in cnf_simp_wo_x)
     e_wo_x = solver.satcount(cnf_simp_wo_x)*2**(-vars_cnf_wo_x)
-    print(e_w_x, e_wo_x)
     return (e_w_x-e_wo_x)*2
 
 def influence(f: PseudoBoolFunc, x: str) -> float:
