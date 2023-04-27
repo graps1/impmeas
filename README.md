@@ -9,7 +9,7 @@ Requires lark for parsing formulas (https://github.com/lark-parser/lark).
 This package provides three formalisms for representing Boolean functions:
 - a table-based representation that models functions as column-vectors of exponential size,
 - a formula-based representation and
-- a BDD-based representation. Requires BuDDy (https://github.com/graps1/impmeas).
+- a BDD-based representation. Requires BuDDy (https://github.com/jgcoded/BuDDy).
 
 The computation of importance values strongly relies on the ability to count the number of satisfying assignments of different functions.
 Thus, this package also allows for the use of GPMC (https://git.trs.css.i.nagoya-u.ac.jp/k-hasimt/GPMC/-/tree/master)
