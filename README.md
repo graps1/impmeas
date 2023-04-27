@@ -1,20 +1,4 @@
-A framework for operations on Boolean functions and importance measures. 
-
-| Value | Table based | BuDDy | GPMC |
-|--|--|--|--|
-| Banzhaf | &#10004; | &#10004; | &#10004;
-| Shapley | &#10004; | &#10007; | &#10007; 
-| Influence | &#10004; | &#10004; | &#10004;
-| CHK's Blame | &#10004; | &#10004; | &#10004;
-| modified Blame | &#10004; | &#10004; | &#10004;
-
-| Coalition Game Mapping | Table based | BuDDy |
-|--|--|--|
-| Dominating CGM | &#10004; | &#10004;
-| Rectifying CGM | &#10004; | &#10004;
-| HKR's CGM | &#10004;  | &#10007;
-
-## Usage
+## A framework for operations on Boolean functions and importance measures
 
 Installation via
 
@@ -22,7 +6,32 @@ Installation via
 
 Requires lark for parsing formulas (https://github.com/lark-parser/lark).
 
-### Table based representations
+This package provides three formalisms for representing Boolean functions:
+- a table-based representation that models functions as column-vectors of exponential size,
+- a formula-based representation and
+- a BDD-based representation. Requires BuDDy (https://github.com/graps1/impmeas).
+
+The computation of importance values strongly relies on the ability to count the number of satisfying assignments of different functions.
+Thus, this package also allows for the use of GPMC (https://git.trs.css.i.nagoya-u.ac.jp/k-hasimt/GPMC/-/tree/master)
+as a backend for counting models of formula-based function representations.
+
+The following importance-value calculations are available:
+
+| | Table-based | BDD-based | Formula-based |
+|--|--|--|--|
+| **Importance value** | | | |
+| Banzhaf value | &#10004; | &#10004; | &#10004;
+| Shapley value | &#10004; | &#10007; | &#10007; 
+| Influence | &#10004; | &#10004; | &#10004;
+| Chockler, Halpern and Kupferman's blame | &#10004; | &#10004; | &#10004;
+| Modified blame | &#10004; | &#10004; | &#10004;
+| **Coalition Game Mapping** | | | |
+| Dominating CGM | &#10004; | &#10004; | &#10007;
+| Rectifying CGM | &#10004; | &#10004; | &#10007;
+| Hammer, Kogan and Rothblum's CGM | &#10004;  | &#10007; | &#10007;
+
+
+### Table-based representations
 
 One can instantiate Boolean functions represented by tables (i.e. a column vectors of size $2^n$) as follows:
 
@@ -34,7 +43,7 @@ One can instantiate Boolean functions represented by tables (i.e. a column vecto
 	print(h.expectation()) # output: 3/2^2 = 0.75. the relative number of true points.
 ```
 
-More methods that can be called on all representations of Boolean functions (even Formulas and BDDs):
+More methods (can also be called on formula- and BDD-based representations):
 
 ```python
 	f = imp.Table.parse("x & (y ^ z)")
@@ -48,13 +57,13 @@ More methods that can be called on all representations of Boolean functions (eve
 	f.flip("x") # outputs: a Boolean function equivalent to ~x & (y^z) ## only implemented for Table and Formula
 	f.replace({"x":"v"}) # outputs: a Boolean functions equivalent to v & (y^z)
 	f.prime_implicants() # outputs: [{'y': True, 'x': True, 'z': False}, {'y': False, 'x': True, 'z': True}] ## a list of f's prime implicants
-	f.set_print_mode("table") # whether one wants to print Boolean functions as tables
-	f.set_print_mode("primes") # whether one wants to print Boolean functions as a disjunction of their prime implicants 
+	f.set_print_mode("table") # if one wants to print Boolean functions as tables
+	f.set_print_mode("primes") # if one wants to print Boolean functions as a disjunction of their prime implicants 
 	x = imp.Table.parse("x")
 	f.equivalent(x & f1 | ~x & f0) # output: True ## checks for semantic equivalence 
 ```
 
-It is possible to represent pseudo Boolean functions using tables (and only tables):
+Pseudo Boolean functions are also supported for table-based representations:
 
 ```python
 	f = imp.Table.parse("x")
@@ -62,7 +71,7 @@ It is possible to represent pseudo Boolean functions using tables (and only tabl
 	print( (3+g-f)**0.5 ) # outputs: a Table with floating point entries
 ```
 
-The computation of importance values such as the (modified) Blame, the Influence and Banzhaf + Shapley values is supported as well,
+The computation of importance values such as the (modified) blame, the influence and Banzhaf + Shapley values is supported as well,
 
 ```python
 	f = imp.Table.parse("x & (y ^ z)")
@@ -73,7 +82,7 @@ The computation of importance values such as the (modified) Blame, the Influence
 	imp.shapley(f, "y") # output: -0.166..
 ```
 
-Here, Banzhaf and Shapley values are computed by interpreting assignments as subsets via the characteristic mapping. Compute coalition game mappings as follows:
+Here, Banzhaf and Shapley values are computed by interpreting assignments as subsets through the indicator function. Compute coalition game mappings as follows:
 
 ```python
 	omega_f = imp.dominating_cgm(f) # output: instance of imp.Table with omega_f = xyz
@@ -84,9 +93,9 @@ Here, Banzhaf and Shapley values are computed by interpreting assignments as sub
 	imp.banzhaf(hkr_f, "y") # output: 0.1875
 ```
 
-### Formula based representations
+### Formula-based representations
 
-Also doesn't require more packages. Only Boolean operations are supported. We represent Boolean functions by formulas, e.g.
+Only Boolean operations are supported:
 
 ```python
 	import impmeas as imp 
@@ -109,9 +118,9 @@ Efficiency can be gained by installing the GPMC model counter (https://git.trs.c
 	print(f.expectation()) # output: 0.25. expected value of f without warning
 ```
 
-The computation of Blame, Influence and Blame values via (projected) model counting is supported.
+The computation of blame, influence and blame values via (projected) model counting is supported.
 
-### BDD based representations 
+### BDD-based representations 
 
 We can use Buddy (https://buddy.sourceforge.net/manual/main.html, https://github.com/jgcoded/BuDDy) to represent Boolean functions using BDDs. Only Boolean operations are supported:
 
@@ -134,20 +143,20 @@ The dominating and rectifying coalition game mappings can be represented using B
 	imp.rectifying_cgm(f) # output: <impmeas.formulas.buddy.BuddyNode at ....>  representing the function x&(y|z)
 ```
 
-Banzhaf, Influence and Blame values can be computed relatively efficiently using BDDs.
+Banzhaf, influence and blame values can be computed relatively efficiently using BDDs.
 
-## Examples and Benchmarks
+## Examples and benchmarks
 
 Can be found under `impmeas/notebooks`.
 
 * `examples.ipynb` consists of multiple examples that show how one can compute importance values using Buddy, GPMC or simple table based representations.
-* `HKR_constancy_measures.ipynb` renders HKR's constancy measures.
+* `HKR_constancy_measures.ipynb` renders some of Hammer, Kogan and Rothblum's constancy measures.
 * `special_class_of_functions.ipynb` contains a class of Boolean functions that introduces a lot of "disagreement" between different importance value functions.
 * `impmeas/notebooks/benchmarks` contains data and notebooks used for executing the ISCAS'99 and random CNF benchmarks.
 
-## Parsing Formulas 
+## Parsing formulas 
 
-Parsing formulas using lark is quite slow for larger formulas. It is advised to use
+Using lark is quite slow for larger formulas. It is advised to use
 
 ```python
 	x,y,z = imp.Formula.var("x"), imp.Formula.var("y"), imp.Formula.var("z")
@@ -155,7 +164,7 @@ Parsing formulas using lark is quite slow for larger formulas. It is advised to 
 	print(f) # output: x&(y^z)
 ```
 
-or comparable instead. One can also enter already parsed formulas as tree, like so:
+or comparable instead. One can also enter already parsed formulas as trees:
 
 ```python
 	variable = ("V", "x")
