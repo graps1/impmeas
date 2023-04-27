@@ -1,4 +1,4 @@
-## A framework for operations on Boolean functions and importance measures
+## A framework for Boolean functions and importance measures
 
 Installation via
 
