@@ -25,7 +25,7 @@ The following importance-value calculations are available:
 | Influence | &#10004; | &#10004; | &#10004;
 | Chockler, Halpern and Kupferman's blame | &#10004; | &#10004; | &#10004;
 | Modified blame | &#10004; | &#10004; | &#10004;
-| **Coalition Game Mapping** | | | |
+| **Coalition game mapping** | | | |
 | Dominating CGM | &#10004; | &#10004; | &#10007;
 | Rectifying CGM | &#10004; | &#10004; | &#10007;
 | Hammer, Kogan and Rothblum's CGM | &#10004;  | &#10007; | &#10007;
