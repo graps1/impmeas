@@ -10,9 +10,9 @@ Given a Boolean function $f$ and variable $x$, a value function
 is a mapping $\mathfrak I$ that associates 
 $x$ and $f$ with a value $\mathfrak I_x(f) \in \mathbb R$. The influence, for example, is the value function
 $\mathbf I$ that can be defined as
-$$
+```math
 	\mathbf I_x(f) = \frac 1 {2^{|X|}} \sum_{\mathbf x \in \{0,1\}^X} [\![f(\mathbf x) \neq f(\mathbf x \oplus \mathbf 1_x) ]\!],
-$$
+```
 where $X$ is the set of all variables. 
 It is essentially the probability that flipping $x$ changes the outcome of 
 the function for uniformly random assignments.
