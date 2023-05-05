@@ -1,4 +1,42 @@
-## A framework for Boolean functions and importance measures
+# A framework for Boolean functions and importance measures
+
+This project provides multiple implementations for different importance values for Booelan functions (IVFs).
+
+A matching paper will be published:
+
+> H. Harder, S. Jantsch, C. Baier, C. Dubslaff (2023). "A Unifying Formal Approach to Importance Values in Boolean Functions". *International Joint Conference on Artificial Intelligence (IJCAI)*. Macau, 2023.
+
+Given a Boolean function $f$ and variable $x$, a value function 
+is a mapping $\mathfrak I$ that associates 
+$x$ and $f$ with a value $\mathfrak I_x(f) \in \mathbb R$. The influence, for example, is the value function
+$\mathbf I$ that can be defined as
+$$
+	\mathbf I_x(f) = \frac 1 {2^{|X|}} \sum_{\mathbf x \in \{0,1\}^X} [\![f(\mathbf x) \neq f(\mathbf x \oplus \mathbf 1_x) ]\!],
+$$
+where $X$ is the set of all variables. 
+It is essentially the probability that flipping $x$ changes the outcome of 
+the function for uniformly random assignments.
+
+
+## Available methods
+
+Boolean functions are represented either by tables, BDDs or formulas. 
+Different methods are used for IVF-computations depending on the representation:
+
+| | Table-based | BDD-based | Formula-based |
+|--|--|--|--|
+| **Importance value** | | | |
+| Banzhaf value | &#10004; | &#10004; | &#10004;
+| Shapley value | &#10004; | &#10007; | &#10007; 
+| Influence | &#10004; | &#10004; | &#10004;
+| Chockler, Halpern and Kupferman's blame | &#10004; | &#10004; | &#10004;
+| Modified blame | &#10004; | &#10004; | &#10004;
+| **Coalition game mapping** | | | |
+| Dominating CGM | &#10004; | &#10004; | &#10007;
+| Rectifying CGM | &#10004; | &#10004; | &#10007;
+| Hammer, Kogan and Rothblum's CGM | &#10004;  | &#10007; | &#10007;
+
+## Installation
 
 Installation via
 
@@ -15,21 +53,7 @@ The computation of importance values strongly relies on the ability to count the
 Thus, this package also allows for the use of GPMC (https://git.trs.css.i.nagoya-u.ac.jp/k-hasimt/GPMC/-/tree/master)
 as a backend for counting models of formula-based function representations.
 
-The following importance-value calculations are available:
-
-| | Table-based | BDD-based | Formula-based |
-|--|--|--|--|
-| **Importance value** | | | |
-| Banzhaf value | &#10004; | &#10004; | &#10004;
-| Shapley value | &#10004; | &#10007; | &#10007; 
-| Influence | &#10004; | &#10004; | &#10004;
-| Chockler, Halpern and Kupferman's blame | &#10004; | &#10004; | &#10004;
-| Modified blame | &#10004; | &#10004; | &#10004;
-| **Coalition game mapping** | | | |
-| Dominating CGM | &#10004; | &#10004; | &#10007;
-| Rectifying CGM | &#10004; | &#10004; | &#10007;
-| Hammer, Kogan and Rothblum's CGM | &#10004;  | &#10007; | &#10007;
-
+# Usage
 
 ### Table-based representations
 
